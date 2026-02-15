@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                         GRAFANA FINAL SCANNER v1.0                           ║
-║                    Professional Security Assessment Tool                     ║
-║                                                                              ║
-║  Developed by: Security Research Division                                   ║
-║  Purpose: Comprehensive Grafana vulnerability detection and analysis        ║
-║  License: Educational and authorized security testing only                  ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-"""
+
 
 import argparse
 import requests
