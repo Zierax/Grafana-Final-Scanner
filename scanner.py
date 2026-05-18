@@ -1625,86 +1625,93 @@ class GrafanaFinalScanner:
             'vulnerabilities': [],
             'configuration': {},
             'statistics': {},
-            'accessible': False
+            'accessible': False,
+            'interrupted': False
         }
-        
-        # Phase 1: Connectivity
-        self.log("Phase 1: Connectivity Verification", "INFO")
         try:
-            response = self._safe_request('GET', url, allow_redirects=True)
-            if response:
-                results['accessible'] = True
-                self.log(f"Target reachable (HTTP {response.status_code})", "SUCCESS", 1)
-            else:
-                self.log("Target unreachable - check URL and network connectivity", "ERROR", 1)
+            # Phase 1: Connectivity
+            self.log("Phase 1: Connectivity Verification", "INFO")
+            try:
+                response = self._safe_request('GET', url, allow_redirects=True)
+                if response:
+                    results['accessible'] = True
+                    self.log(f"Target reachable (HTTP {response.status_code})", "SUCCESS", 1)
+                else:
+                    self.log("Target unreachable - check URL and network connectivity", "ERROR", 1)
+                    return results
+            except requests.exceptions.SSLError:
+                self.log("SSL certificate validation failed - use --no-ssl-verify for self-signed certificates", "ERROR", 1)
                 return results
-        except requests.exceptions.SSLError:
-            self.log("SSL certificate validation failed - use --no-ssl-verify for self-signed certificates", "ERROR", 1)
-            return results
-        except requests.exceptions.Timeout:
-            self.log(f"Connection timeout ({self.timeout}s) - target may be slow or blocking requests", "ERROR", 1)
-            return results
-        except requests.exceptions.ConnectionError as e:
-            self.log(f"Connection refused: {str(e)}", "ERROR", 1)
-            return results
-        except Exception as e:
-            self.log(f"Unexpected error: {str(e)}", "ERROR", 1)
-            return results
-        
-        # Phase 2: Version Detection
-        print()
-        self.log("Phase 2: Version Fingerprinting", "INFO")
-        version = self.detect_grafana_version(url)
-        results['version'] = version
-        results['build_info'] = self.build_info
-        
-        # Phase 3: Vulnerability Assessment
-        print()
-        self.log("Phase 3: Vulnerability Scanning", "INFO")
-        print()
-        
-        # Critical CVEs
-        cve_checks = [
-            ("CVE-2025-4123", "CRITICAL", "Path Traversal & Open Redirect", self.check_cve_2025_4123),
-            ("CVE-2024-9264", "CRITICAL", "DuckDB SQL Injection (RCE)", self.check_cve_2024_9264),
-            ("CVE-2024-8118", "CRITICAL", "OAuth Authentication Bypass", self.check_cve_2024_8118),
-            ("CVE-2021-43798", "CRITICAL", "Directory Traversal", self.check_cve_2021_43798),
-            ("CVE-2023-50164", "HIGH", "Plugin Path Traversal", self.check_cve_2023_50164),
-            ("CVE-2023-1410", "HIGH", "SSRF via Data Source Proxy", self.check_cve_2023_1410),
-            ("CVE-2023-2183", "HIGH", "Authentication Bypass", self.check_cve_2023_2183),
-            ("CVE-2018-15727", "HIGH", "Authentication Bypass (Cookie)", self.check_cve_2018_15727),
-            ("CVE-2021-39226", "MEDIUM", "Snapshot Enumeration", self.check_cve_2021_39226),
-            ("CVE-2024-1313", "MEDIUM", "Information Disclosure", self.check_cve_2024_1313),
-        ]
-        
-        # Run CVE checks in parallel if max_threads > 1
-        if self.max_threads > 1 and len(cve_checks) > 1:
-            self._run_cve_checks_parallel(cve_checks, url, results)
-        else:
-            for cve_id, severity, description, check_func in cve_checks:
-                self._run_single_cve_check(cve_id, severity, description, check_func, url, results)
-        
-        # Additional CVEs
-        for vulnerable, message, test_url, cve_id in self.check_additional_cves(url):
-            if vulnerable:
-                severity = "MEDIUM" if "2020" in cve_id or "2021" in cve_id else "LOW"
-                self._report_vulnerability(cve_id, severity, message, test_url, results)
-            elif self.verbose:
-                self.log(f"{cve_id:18} {message}", "SAFE", 1)
-        
-        # Phase 4: Configuration Analysis
-        print()
-        self.log("Phase 4: Security Configuration Analysis", "INFO")
-        config = self.check_security_config(url)
-        results['configuration'] = config
-        
-        for check_name, check_data in config.items():
-            severity = check_data.get('severity', 'INFO')
-            if severity in ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']:
-                self.log(check_data.get('message', str(check_data)), severity, 1)
-                if 'url' in check_data:
-                    self.log(f"└─ Endpoint: {Colors.DIM}{check_data['url']}{Colors.RESET}", severity, 2)
-        
+            except requests.exceptions.Timeout:
+                self.log(f"Connection timeout ({self.timeout}s) - target may be slow or blocking requests", "ERROR", 1)
+                return results
+            except requests.exceptions.ConnectionError as e:
+                self.log(f"Connection refused: {str(e)}", "ERROR", 1)
+                return results
+            except Exception as e:
+                self.log(f"Unexpected error: {str(e)}", "ERROR", 1)
+                return results
+
+            # Phase 2: Version Detection
+            print()
+            self.log("Phase 2: Version Fingerprinting", "INFO")
+            version = self.detect_grafana_version(url)
+            results['version'] = version
+            results['build_info'] = self.build_info
+
+            # Phase 3: Vulnerability Assessment
+            print()
+            self.log("Phase 3: Vulnerability Scanning", "INFO")
+            print()
+
+            # Critical CVEs
+            cve_checks = [
+                ("CVE-2025-4123", "CRITICAL", "Path Traversal & Open Redirect", self.check_cve_2025_4123),
+                ("CVE-2024-9264", "CRITICAL", "DuckDB SQL Injection (RCE)", self.check_cve_2024_9264),
+                ("CVE-2024-8118", "CRITICAL", "OAuth Authentication Bypass", self.check_cve_2024_8118),
+                ("CVE-2021-43798", "CRITICAL", "Directory Traversal", self.check_cve_2021_43798),
+                ("CVE-2023-50164", "HIGH", "Plugin Path Traversal", self.check_cve_2023_50164),
+                ("CVE-2023-1410", "HIGH", "SSRF via Data Source Proxy", self.check_cve_2023_1410),
+                ("CVE-2023-2183", "HIGH", "Authentication Bypass", self.check_cve_2023_2183),
+                ("CVE-2018-15727", "HIGH", "Authentication Bypass (Cookie)", self.check_cve_2018_15727),
+                ("CVE-2021-39226", "MEDIUM", "Snapshot Enumeration", self.check_cve_2021_39226),
+                ("CVE-2024-1313", "MEDIUM", "Information Disclosure", self.check_cve_2024_1313),
+            ]
+
+            interrupted = False
+            if self.max_threads > 1 and len(cve_checks) > 1:
+                interrupted = self._run_cve_checks_parallel(cve_checks, url, results)
+            else:
+                for cve_id, severity, description, check_func in cve_checks:
+                    self._run_single_cve_check(cve_id, severity, description, check_func, url, results)
+
+            if not interrupted:
+                # Additional CVEs
+                for vulnerable, message, test_url, cve_id in self.check_additional_cves(url):
+                    if vulnerable:
+                        severity = "MEDIUM" if "2020" in cve_id or "2021" in cve_id else "LOW"
+                        self._report_vulnerability(cve_id, severity, message, test_url, results)
+                    elif self.verbose:
+                        self.log(f"{cve_id:18} {message}", "SAFE", 1)
+
+                # Phase 4: Configuration Analysis
+                print()
+                self.log("Phase 4: Security Configuration Analysis", "INFO")
+                config = self.check_security_config(url)
+                results['configuration'] = config
+
+                for check_name, check_data in config.items():
+                    severity = check_data.get('severity', 'INFO')
+                    if severity in ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']:
+                        self.log(check_data.get('message', str(check_data)), severity, 1)
+                        if 'url' in check_data:
+                            self.log(f"└─ Endpoint: {Colors.DIM}{check_data['url']}{Colors.RESET}", severity, 2)
+
+            results['interrupted'] = interrupted
+        except KeyboardInterrupt:
+            results['interrupted'] = True
+            self.log("Scan interrupted by user - returning partial results", "WARN", 1)
+
         # Final Statistics
         results['statistics'] = self.stats
         
@@ -1717,6 +1724,8 @@ class GrafanaFinalScanner:
         self.log(f"Checks passed: {self.stats['checks_passed']}", "SUCCESS", 1)
         if self.stats['errors'] > 0:
             self.log(f"Errors: {self.stats['errors']}", "WARN", 1)
+        if results.get('interrupted'):
+            self.log("Partial results only - scan was interrupted", "WARN", 1)
         
         return results
     
@@ -1729,17 +1738,28 @@ class GrafanaFinalScanner:
                 return cve_id, severity, description, vulnerable, message, test_url
             except Exception as e:
                 return cve_id, severity, description, False, f"Error: {str(e)}", url
-        
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_threads) as executor:
-            futures = {executor.submit(run_check, check): check for check in cve_checks}
-            
+
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.max_threads)
+        futures = {executor.submit(run_check, check): check for check in cve_checks}
+
+        interrupted = False
+        try:
             for future in concurrent.futures.as_completed(futures):
                 cve_id, severity, description, vulnerable, message, test_url = future.result()
-                
+
                 if vulnerable:
                     self._report_vulnerability(cve_id, severity, message, test_url, results, description)
                 elif self.verbose:
                     self.log(f"{cve_id:18} {message}", "SAFE", 1)
+        except KeyboardInterrupt:
+            interrupted = True
+            self.log("Interrupt received - cancelling remaining CVE checks", "WARN", 2)
+            for future in futures:
+                future.cancel()
+        finally:
+            executor.shutdown(wait=not interrupted, cancel_futures=interrupted)
+
+        return interrupted
     
     def _run_single_cve_check(self, cve_id: str, severity: str, description: str,
                               check_func, url: str, results: Dict):
@@ -1792,10 +1812,18 @@ class GrafanaFinalScanner:
                 print(f"\n{Colors.BOLD}[Target {i}/{len(urls)}]{Colors.RESET}")
                 result = self.scan_target(url)
                 results.append(result)
+
+                if result.get('interrupted'):
+                    self.log("Batch scan interrupted - returning partial results", "WARN")
+                    break
                 
                 if i < len(urls) and not self._rate_limited:
                     time.sleep(1)  # Polite delay between targets
             
+            return results
+
+        except KeyboardInterrupt:
+            self.log("Batch scan interrupted - returning partial results", "WARN")
             return results
             
         except FileNotFoundError:
@@ -1812,6 +1840,9 @@ class GrafanaFinalScanner:
         print(f"\n{Colors.HEADER}{'═'*80}{Colors.RESET}")
         print(f"{Colors.HEADER}║{Colors.RESET} {Colors.BOLD}ASSESSMENT SUMMARY{Colors.RESET}")
         print(f"{Colors.HEADER}{'═'*80}{Colors.RESET}\n")
+
+        if any(result.get('interrupted') for result in results):
+            print(f"{Colors.WARN}[!] Partial report generated after user interruption{Colors.RESET}\n")
         
         # Statistics
         total_targets = len(results)
@@ -2170,7 +2201,11 @@ def main():
         scanner.generate_report(results, args.output)
         
     except KeyboardInterrupt:
-        print(f"\n\n{Colors.WARN}[!] Scan interrupted by user{Colors.RESET}")
+        if results:
+            print(f"\n\n{Colors.WARN}[!] Scan interrupted by user - generating partial report{Colors.RESET}")
+            scanner.generate_report(results, args.output)
+        else:
+            print(f"\n\n{Colors.WARN}[!] Scan interrupted by user{Colors.RESET}")
         sys.exit(0)
     except Exception as e:
         print(f"\n{Colors.CRITICAL}[!] Fatal error: {str(e)}{Colors.RESET}")

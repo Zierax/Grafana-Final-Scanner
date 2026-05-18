@@ -502,6 +502,38 @@ class TestHTMLReportGeneration(unittest.TestCase):
         finally:
             os.unlink(temp_path)
 
+    @patch('scanner.time.sleep', return_value=None)
+    def test_scan_from_file_returns_partial_results_on_interrupt(self, mock_sleep):
+        """Batch scans should return completed targets when interrupted"""
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
+            f.write('https://one.example.com\n')
+            f.write('https://two.example.com\n')
+            temp_path = f.name
+
+        try:
+            scan_results = [
+                {
+                    'url': 'https://one.example.com',
+                    'timestamp': '2025-01-01T00:00:00',
+                    'version': None,
+                    'build_info': {},
+                    'vulnerabilities': [],
+                    'configuration': {},
+                    'statistics': {},
+                    'accessible': True,
+                    'interrupted': False,
+                },
+                KeyboardInterrupt(),
+            ]
+
+            with patch.object(GrafanaFinalScanner, 'scan_target', side_effect=scan_results):
+                results = self.scanner.scan_from_file(temp_path)
+
+            self.assertEqual(len(results), 1)
+            self.assertEqual(results[0]['url'], 'https://one.example.com')
+        finally:
+            os.unlink(temp_path)
+
 
 class TestSafeRequest(unittest.TestCase):
     """Test safe request wrapper"""
