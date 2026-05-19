@@ -743,7 +743,7 @@ class TestReportGenerationEdgeCases(unittest.TestCase):
             temp_path = f.name
         try:
             self.scanner._save_html_report(self.empty_results, temp_path)
-            with open(temp_path, 'r') as f:
+            with open(temp_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             self.assertIn('<html', content)
             self.assertIn('No vulnerabilities detected', content)
@@ -758,7 +758,7 @@ class TestReportGenerationEdgeCases(unittest.TestCase):
             temp_path = f.name
         try:
             self.scanner._save_html_report(self.no_vuln_results, temp_path)
-            with open(temp_path, 'r') as f:
+            with open(temp_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             self.assertIn('No vulnerabilities detected', content)
         finally:
@@ -771,7 +771,7 @@ class TestReportGenerationEdgeCases(unittest.TestCase):
             temp_path = f.name
         try:
             self.scanner._save_html_report(self.special_char_results, temp_path)
-            with open(temp_path, 'r') as f:
+            with open(temp_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             # Raw HTML special chars should NOT appear unescaped in output
             self.assertNotIn('<script>', content)
@@ -818,7 +818,7 @@ class TestReportGenerationEdgeCases(unittest.TestCase):
             temp_path = f.name
         try:
             self.scanner._save_html_report(self.minimal_result, temp_path)
-            with open(temp_path, 'r') as f:
+            with open(temp_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             self.assertIn('<html', content)
             self.assertIn('CVE-2021-43798', content)

@@ -1903,18 +1903,34 @@ class GrafanaFinalScanner:
         # Save reports
         base_filename = None
         if output_file:
-            base_filename = output_file
-            if base_filename.endswith('.json'):
-                base_filename = base_filename[:-5]
-            elif base_filename.endswith('.html'):
-                base_filename = base_filename[:-5]
-            elif base_filename.endswith('.csv'):
-                base_filename = base_filename[:-5]
+            base_filename = self._get_next_report_base_filename(output_file)
         
         if base_filename:
             self._save_json_report(results, f"{base_filename}.json")
             self._save_html_report(results, f"{base_filename}.html")
             self._save_csv_report(results, f"{base_filename}.csv")
+
+    def _get_next_report_base_filename(self, output_file: str) -> str:
+        """Return the next available numbered report basename."""
+        base_filename = output_file
+        for extension in ('.json', '.html', '.csv'):
+            if base_filename.lower().endswith(extension):
+                base_filename = base_filename[:-len(extension)]
+                break
+
+        directory = os.path.dirname(base_filename)
+        stem = os.path.basename(base_filename)
+        counter = 1001
+
+        while True:
+            candidate_stem = f"{stem}_{counter}"
+            candidate_base = os.path.join(directory, candidate_stem) if directory else candidate_stem
+            candidate_files = [f"{candidate_base}.json", f"{candidate_base}.html", f"{candidate_base}.csv"]
+
+            if not any(os.path.exists(candidate_file) for candidate_file in candidate_files):
+                return candidate_base
+
+            counter += 1
     
     def _save_json_report(self, results: List[Dict], filename: str):
         """Save JSON format report"""
@@ -2049,7 +2065,7 @@ class GrafanaFinalScanner:
 </body>
 </html>"""
             
-            with open(filename, 'w') as f:
+            with open(filename, 'w', encoding='utf-8') as f:
                 f.write(html_content)
             print(f"{Colors.SUCCESS}[+] HTML report saved: {filename}{Colors.RESET}")
             

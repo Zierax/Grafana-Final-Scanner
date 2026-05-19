@@ -1,0 +1,327 @@
+Target URL,Grafana Version,CVE ID,Severity,Description,Message,Test URL,Timestamp
+https://data-api.coindesk.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:10:46.620571
+https://tools-api.cryptocompare.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:12:46.966349
+https://acorns.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.acorns.com | Open redirect to external domain: www.acorns.com | Open redirect via login redirect parameter,https://acorns.com//api/snapshots,2026-05-18T22:13:43.093961
+https://acorns.com,,CVE-2024-8118,CRITICAL,OAuth Authentication Bypass,OAuth endpoint accessible: /api/login/oauth2 (HTTP 301). Potential auth bypass vector.,https://acorns.com/api/login/oauth2,2026-05-18T22:13:43.093961
+https://acorns.com,,CVE-2021-27358,MEDIUM,Unauthenticated POST to snapshots - DoS vector,Unauthenticated POST to snapshots - DoS vector,https://acorns.com/api/snapshots,2026-05-18T22:13:43.093961
+https://apps.apple.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:14:27.870748
+https://graphql.acorns.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:16:15.927077
+https://www.gohenry.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:16:18.652879
+https://www.pixpay.fr,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://www.pixpay.fr//api/snapshots,2026-05-18T22:16:54.290039
+https://www.pixpay.fr,,CVE-2024-8118,CRITICAL,OAuth Authentication Bypass,OAuth endpoint accessible: /api/login/oauth2 (HTTP 301). Potential auth bypass vector.,https://www.pixpay.fr/api/login/oauth2,2026-05-18T22:16:54.290039
+https://www.pixpay.fr,,CVE-2021-27358,MEDIUM,Unauthenticated POST to snapshots - DoS vector,Unauthenticated POST to snapshots - DoS vector,https://www.pixpay.fr/api/snapshots,2026-05-18T22:16:54.290039
+https://portal.afterpay.com,,CVE-2024-8118,CRITICAL,OAuth Authentication Bypass,OAuth endpoint accessible: /api/login/oauth2 (HTTP 302). Potential auth bypass vector.,https://portal.afterpay.com/api/login/oauth2,2026-05-18T22:17:36.469789
+https://portal.afterpay.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://portal.afterpay.com//api/snapshots,2026-05-18T22:17:36.469789
+https://portal.afterpay.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://portal.afterpay.com/api/snapshots/50,2026-05-18T22:17:36.469789
+https://portal.afterpay.com,,CVE-2021-27358,MEDIUM,Unauthenticated POST to snapshots - DoS vector,Unauthenticated POST to snapshots - DoS vector,https://portal.afterpay.com/api/snapshots,2026-05-18T22:17:36.469789
+https://afterpay.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.afterpay.com | Open redirect to external domain: www.afterpay.com | Open redirect via login redirect parameter,https://afterpay.com//api/snapshots,2026-05-18T22:19:33.655148
+https://afterpay.com,,CVE-2024-8118,CRITICAL,OAuth Authentication Bypass,OAuth endpoint accessible: /api/login/oauth2 (HTTP 301). Potential auth bypass vector.,https://afterpay.com/api/login/oauth2,2026-05-18T22:19:33.655148
+https://afterpay.com,,CVE-2021-27358,MEDIUM,Unauthenticated POST to snapshots - DoS vector,Unauthenticated POST to snapshots - DoS vector,https://afterpay.com/api/snapshots,2026-05-18T22:19:33.655148
+https://mobileapi.afterpay.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:21:48.140746
+https://portalapi.us.afterpay.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:21:50.568055
+https://developers.afterpay.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:21:53.347747
+https://clearpay.co.uk,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.clearpay.co.uk | Open redirect to external domain: www.clearpay.co.uk | Open redirect via login redirect parameter,https://clearpay.co.uk//api/snapshots,2026-05-18T22:23:00.054572
+https://clearpay.co.uk,,CVE-2024-8118,CRITICAL,OAuth Authentication Bypass,OAuth endpoint accessible: /api/login/oauth2 (HTTP 301). Potential auth bypass vector.,https://clearpay.co.uk/api/login/oauth2,2026-05-18T22:23:00.054572
+https://clearpay.co.uk,,CVE-2021-27358,MEDIUM,Unauthenticated POST to snapshots - DoS vector,Unauthenticated POST to snapshots - DoS vector,https://clearpay.co.uk/api/snapshots,2026-05-18T22:23:00.054572
+https://clearpay.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.clearpay.com | Open redirect to external domain: www.clearpay.com | Open redirect via login redirect parameter,https://clearpay.com//api/snapshots,2026-05-18T22:24:06.325389
+https://clearpay.com,,CVE-2024-8118,CRITICAL,OAuth Authentication Bypass,OAuth endpoint accessible: /api/login/oauth2 (HTTP 301). Potential auth bypass vector.,https://clearpay.com/api/login/oauth2,2026-05-18T22:24:06.325389
+https://clearpay.com,,CVE-2021-27358,MEDIUM,Unauthenticated POST to snapshots - DoS vector,Unauthenticated POST to snapshots - DoS vector,https://clearpay.com/api/snapshots,2026-05-18T22:24:06.325389
+https://portal.clearpay.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://portal.clearpay.com//api/snapshots,2026-05-18T22:25:21.242512
+https://portal.clearpay.com,,CVE-2024-8118,CRITICAL,OAuth Authentication Bypass,OAuth endpoint accessible: /api/login/oauth2 (HTTP 302). Potential auth bypass vector.,https://portal.clearpay.com/api/login/oauth2,2026-05-18T22:25:21.242512
+https://portal.clearpay.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://portal.clearpay.com/api/snapshots/50,2026-05-18T22:25:21.242512
+https://portal.clearpay.com,,CVE-2021-27358,MEDIUM,Unauthenticated POST to snapshots - DoS vector,Unauthenticated POST to snapshots - DoS vector,https://portal.clearpay.com/api/snapshots,2026-05-18T22:25:21.242512
+https://portal.clearpay.co.uk,,CVE-2024-8118,CRITICAL,OAuth Authentication Bypass,OAuth endpoint accessible: /api/login/oauth2 (HTTP 302). Potential auth bypass vector.,https://portal.clearpay.co.uk/api/login/oauth2,2026-05-18T22:26:35.799437
+https://portal.clearpay.co.uk,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://portal.clearpay.co.uk//api/snapshots,2026-05-18T22:26:35.799437
+https://portal.clearpay.co.uk,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://portal.clearpay.co.uk/api/snapshots/50,2026-05-18T22:26:35.799437
+https://portal.clearpay.co.uk,,CVE-2021-27358,MEDIUM,Unauthenticated POST to snapshots - DoS vector,Unauthenticated POST to snapshots - DoS vector,https://portal.clearpay.co.uk/api/snapshots,2026-05-18T22:26:35.799437
+https://mobileapi.clearpay.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:27:51.516949
+https://portalapi.eu.clearpay.co.uk,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:27:52.580314
+https://api.clearpay.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:27:54.739897
+https://marketplace.atlassian.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://marketplace.atlassian.com//api/snapshots,2026-05-18T22:27:56.709647
+https://aiven.io,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:29:57.108017
+https://regatta.aiven.io,2024.11.0,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:31:48.334339
+https://console.aiven.io,2024.11.0,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:33:02.720021
+https://api.aiven.io,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:34:11.910058
+https://falcon-bug-bounty-flag-pgsql-dev-sandbox.aivencloud.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:35:20.083171
+https://beta.arlo.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:35:43.225167
+https://mcs.arlo.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:36:47.801057
+https://my.arlo.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:36:50.634135
+https://myapi.arlo.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:38:27.279741
+https://www.arlo.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://www.arlo.com//api/snapshots,2026-05-18T22:39:29.483354
+https://updates.arlo.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:39:55.695071
+https://partnerapi.arlo.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:40:00.146504
+https://app.asana.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://app.asana.com//api/snapshots,2026-05-18T22:40:03.142271
+https://app.asana.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://app.asana.com/dashboard/snapshot/50,2026-05-18T22:40:03.142271
+https://asana.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:41:12.310604
+https://form.asana.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:44:35.393410
+https://admin.atlassian.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://admin.atlassian.com/api/snapshots/50,2026-05-18T22:46:32.993943
+https://id.atlassian.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:47:37.690247
+https://start.atlassian.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:49:41.587940
+https://bitbucket.org,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:52:39.835422
+https://www.atlassian.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:55:09.940022
+https://support.atlassian.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T22:57:23.236439
+https://mcp.atlassian.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:00:23.540490
+https://www.loom.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:00:26.399836
+https://chromewebstore.google.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:03:18.534206
+https://confluence.atlassian.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:04:38.869552
+https://www.sourcetreeapp.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:06:59.714957
+https://trello.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://trello.com//api/snapshots,2026-05-18T23:07:03.278598
+https://app.aurory.io,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:08:25.540645
+https://store.epicgames.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:10:01.915774
+https://config.cic-bug-bounty.auth0app.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:10:03.952397
+https://manage.cic-bug-bounty.auth0app.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://manage.cic-bug-bounty.auth0app.com//api/snapshots,2026-05-18T23:10:07.039066
+https://marketplace.auth0.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:12:41.219560
+https://dashboard.fga.dev,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://dashboard.fga.dev//api/snapshots,2026-05-18T23:14:27.543689
+https://api.us1.fga.dev,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:16:01.011428
+https://customers.us1.fga.dev,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:16:03.871081
+https://play.fga.dev,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:16:06.556058
+https://jwt.io,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.jwt.io | Open redirect to external domain: www.jwt.io | Open redirect via login redirect parameter,https://jwt.io//api/snapshots,2026-05-18T23:17:18.032413
+https://auth0.net,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:19:50.637643
+https://backblaze.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.backblaze.com | Open redirect to external domain: www.backblaze.com | Open redirect via login redirect parameter,https://backblaze.com//api/snapshots,2026-05-18T23:19:51.712540
+https://www.barracuda.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:23:45.759595
+https://api.coinmarketcap.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:26:24.446890
+https://pro-api.coinmarketcap.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:26:27.144454
+https://www.binance.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:26:29.784749
+https://api.binance.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:28:15.150895
+https://pro.coinmarketcap.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://pro.coinmarketcap.com/api/snapshots/50,2026-05-18T23:29:41.233450
+https://portal-api.coinmarketcap.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:30:13.092063
+https://coinmarketcap.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://coinmarketcap.com//api/snapshots,2026-05-18T23:30:15.917783
+https://3rdparty-apis.coinmarketcap.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:33:33.609065
+https://www.binance.us,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:33:36.128885
+https://binance.tr,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.binance.tr | Open redirect via login redirect parameter,https://binance.tr//api/snapshots,2026-05-18T23:36:29.909137
+https://www.bitdefender.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:39:11.903282
+https://app.bitgo.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://app.bitgo.com//api/snapshots,2026-05-18T23:44:28.790226
+https://app.bitgo-test.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://app.bitgo-test.com//api/snapshots,2026-05-18T23:47:43.636943
+https://bitgo.ae,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:50:51.997774
+https://wbtc.network,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:52:43.956756
+https://usdstandard.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:54:01.103053
+https://web.bitpanda.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:56:06.468377
+https://www.bitpanda.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://www.bitpanda.com//api/snapshots,2026-05-18T23:56:08.369967
+https://api.bitpanda.com,,N/A,N/A,No vulnerabilities found,,,2026-05-18T23:59:05.881222
+https://socket.bitpanda.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:00:07.588549
+https://account.bitpanda.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:00:10.344562
+https://blog.bitpanda.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:00:12.297131
+https://bitso.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:01:28.845524
+https://nvio.mx,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:04:17.707632
+https://nvio.ar,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:08:57.343361
+https://www.blockchain.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:13:27.094917
+https://api.blockchain.info,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: blockchain.info | Open redirect to external domain: blockchain.info | Open redirect via login redirect parameter,https://api.blockchain.info//api/snapshots,2026-05-19T00:16:43.025740
+https://ws.blockchain.info,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:20:25.688006
+https://taxify.eu,2024.11.0,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: bolt.eu | Open redirect to external domain: bolt.eu | Open redirect via login redirect parameter,https://taxify.eu//api/snapshots,2026-05-19T00:20:28.618642
+https://taxify.eu,2024.11.0,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://taxify.eu/api/snapshots/50,2026-05-19T00:20:28.618642
+https://bolt.eu,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://bolt.eu//api/snapshots,2026-05-19T00:21:31.938336
+https://docs.bugcrowd.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:24:56.534166
+https://bugcrowd.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:28:00.080195
+https://tracker.bugcrowd.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://tracker.bugcrowd.com//api/snapshots,2026-05-19T00:34:35.364649
+https://api.bugcrowd.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:38:06.153361
+https://gov.bugcrowd.net,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:41:43.972245
+https://identity.bugcrowd.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:41:48.308658
+https://bullish.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.bullish.com | Open redirect to external domain: www.bullish.com | Open redirect via login redirect parameter,https://bullish.com//api/snapshots,2026-05-19T00:42:43.087626
+https://investor.bullish.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://investor.bullish.com//api/snapshots,2026-05-19T00:45:40.576955
+https://simnext.bullish-test.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:49:26.979052
+https://api.simnext.bullish-test.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:49:29.019182
+https://www.canva.com,2024.11.0,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:49:30.948904
+https://api.canva.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:50:46.582024
+https://www.carrefouruae.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:50:48.844778
+https://api-prod.retailsso.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:51:12.063162
+https://cash.app,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:51:14.567148
+https://www.cfr.org,2024.11.0,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:53:23.433528
+https://thinkglobalhealth.org,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.thinkglobalhealth.org | Open redirect to external domain: www.thinkglobalhealth.org | Open redirect via login redirect parameter,https://thinkglobalhealth.org//api/snapshots,2026-05-19T00:57:34.912695
+https://education.cfr.org,,N/A,N/A,No vulnerabilities found,,,2026-05-19T00:59:11.736350
+https://www.chime.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:01:02.117257
+https://app.chime.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:01:04.057228
+https://member-qa.chime.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:01:07.717307
+https://app-qa.chime.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:02:35.038690
+https://app.saltlabs.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:03:56.104240
+https://app.staging.saltlabs.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:03:58.071689
+https://www.chipotle.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:04:00.037417
+https://www.chipotle.co.uk,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:05:16.795384
+https://catering.chipotle.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:07:17.318672
+https://services.chipotle.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:08:37.341134
+https://www.wien.gv.at,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://www.wien.gv.at//api/snapshots,2026-05-19T01:09:00.290892
+https://www.gesundheitsverbund.at,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:10:17.777964
+https://www.akhwien.at,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:10:48.073422
+https://stp.wien.gv.at,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:10:52.047550
+https://wien.at,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.wien.gv.at | Open redirect to external domain: www.wien.gv.at | Open redirect via login redirect parameter,https://wien.at//api/snapshots,2026-05-19T01:12:07.696215
+https://secumails.gesundheitsverbund.at,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:17:02.601259
+https://mein.wien.gv.at,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:19:15.319199
+https://wibi.wien.gv.at,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:20:23.927585
+https://schulenwien.onmicrosoft.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:21:27.987909
+https://stadtwien-my.sharepoint.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://stadtwien-my.sharepoint.com//api/snapshots,2026-05-19T01:21:29.156813
+https://api.classdojo.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:24:10.913315
+https://teach.classdojo.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://teach.classdojo.com//api/snapshots,2026-05-19T01:24:13.208627
+https://student.classdojo.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://student.classdojo.com//api/snapshots,2026-05-19T01:26:11.748088
+https://www.classdojo.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://www.classdojo.com//api/snapshots,2026-05-19T01:28:01.158564
+https://home.classdojo.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://home.classdojo.com//api/snapshots,2026-05-19T01:29:42.119869
+https://dev.tutoring.classdojo.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:31:27.901312
+https://ws.multiplayer.classdojo.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:31:29.187391
+https://ticket.multiplayer.classdojo.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:31:31.528137
+https://clients.multiplayer.classdojo.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:31:34.673755
+https://monster-customizer.classdojo.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:31:37.303485
+https://clickhou.se,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://clickhou.se/api/snapshots/50,2026-05-19T01:31:39.952107
+https://cloudinary.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:32:16.829255
+https://api.cloudinary.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:33:01.347461
+https://res.cloudinary.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:33:04.398683
+https://mediaflows.cloudinary.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:33:07.117517
+https://dimensions.cloudinary.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:34:14.493241
+https://eua.cms.gov,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:34:15.985087
+https://portal.cms.gov,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:34:39.096485
+https://www.cms.gov,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:42:17.162615
+https://cmsnationaltrainingprogram.cms.gov,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:44:42.580969
+https://csscoperations.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:44:44.549057
+https://adhoc-bugcrowd.cdn-code.org,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:45:08.269663
+https://adhoc-bugcrowd-studio.cdn-code.org,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:45:09.374940
+https://www.coindesk.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:48:53.350771
+https://business.comcast.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T01:52:27.718756
+https://www.xfinity.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T02:33:15.046739
+https://consensus2026.sandbox.events.coindesk.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T02:33:17.432222
+https://console.delltechnologies.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.dell.com | Open redirect to external domain: www.dell.com,https://console.delltechnologies.com//api/snapshots,2026-05-19T02:35:07.449805
+https://docs.eazybi.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T02:40:52.021935
+https://my.elementor.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T02:42:02.341103
+https://go.elementor.com,2025.9.1,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: elementor.com | Open redirect to external domain: elementor.com | Open redirect via login redirect parameter,https://go.elementor.com//api/snapshots,2026-05-19T02:46:50.570754
+https://translate.elementor.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://translate.elementor.com//api/snapshots,2026-05-19T02:48:49.520318
+https://translate.elementor.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,Snapshot enumeration confirmed - 1/50 test IDs accessible. Sample accessible IDs: [1],https://translate.elementor.com/api/snapshots/shared/50,2026-05-19T02:48:49.520318
+https://developers.elementor.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T02:49:14.754074
+https://library.elementor.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T02:49:30.342694
+https://elementor.careers,2024.11.0,N/A,N/A,No vulnerabilities found,,,2026-05-19T02:51:57.494068
+https://activitylog.io,2024.11.0,N/A,N/A,No vulnerabilities found,,,2026-05-19T02:55:12.744676
+https://send2.co,2025.9.1,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: elementor.com | Open redirect to external domain: elementor.com | Open redirect via login redirect parameter,https://send2.co//api/snapshots,2026-05-19T02:57:19.456603
+https://casino.partycasino.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.partycasino.com | Open redirect to external domain: www.partycasino.com | Open redirect via login redirect parameter,https://casino.partycasino.com//api/snapshots,2026-05-19T02:58:14.550871
+https://casino.bwin.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.bwin.com | Open redirect to external domain: www.bwin.com | Open redirect via login redirect parameter,https://casino.bwin.com//api/snapshots,2026-05-19T02:59:47.053133
+https://casino.sportingbet.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.sportingbet.com | Open redirect to external domain: www.sportingbet.com | Open redirect via login redirect parameter,https://casino.sportingbet.com//api/snapshots,2026-05-19T03:01:19.313856
+https://www.ladbrokes.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:02:54.029997
+https://www.coral.co.uk,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:04:43.844494
+https://www.partypoker.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:06:43.582998
+https://www.galabingo.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://www.galabingo.com//api/snapshots,2026-05-19T03:08:18.212221
+https://www.partycasino.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:10:06.384301
+https://www.bwin.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:11:51.823755
+https://www.galacasino.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://www.galacasino.com//api/snapshots,2026-05-19T03:13:30.535816
+https://www.epam.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:15:17.886633
+https://projects.epam.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: project.epam.com | Open redirect to external domain: project.epam.com | Open redirect via login redirect parameter,https://projects.epam.com//api/snapshots,2026-05-19T03:15:19.935045
+https://lab.epam.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:19:30.613190
+https://opensource.epam.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:19:31.733553
+https://www.etoro.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://www.etoro.com/api/snapshots/50,2026-05-19T03:19:34.686990
+https://watchlistapi.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:20:50.239387
+https://wallet.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:20:52.295609
+https://uapi-front.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:21:05.460386
+https://tapi-real.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:21:07.493708
+https://tapi-demo.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:21:09.737228
+https://sts.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:21:12.057536
+https://streams.etoro.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.etoro.com | Open redirect to external domain: www.etoro.com | Open redirect via login redirect parameter,https://streams.etoro.com//api/snapshots,2026-05-19T03:21:13.070480
+https://streams.etoro.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://streams.etoro.com/api/snapshots/50,2026-05-19T03:21:13.070480
+https://rankings.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:21:56.935955
+https://r.etoro.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.etoro.com | Open redirect to external domain: www.etoro.com | Open redirect via login redirect parameter,https://r.etoro.com//api/snapshots,2026-05-19T03:21:59.097946
+https://r.etoro.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://r.etoro.com/api/snapshots/50,2026-05-19T03:21:59.097946
+https://push-real-hk-lightstreamer.cloud.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:23:29.569405
+https://push-n-hap.cloud.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:23:30.696260
+https://push-lightstreamer.cloud.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:23:31.791795
+https://push-hap.cloud.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:25:24.045828
+https://push-dn-hap.cloud.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:25:25.168597
+https://push-demo-lightstreamer.cloud.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:25:26.291836
+https://push-demo-hk-lightstreamer.cloud.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:27:16.369798
+https://push-d-hap.cloud.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:27:17.505086
+https://push-d-gw.cloud.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:27:18.602996
+https://partners.etoro.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: por.etoro.com | Open redirect to external domain: por.etoro.com | Open redirect via login redirect parameter,https://partners.etoro.com//api/snapshots,2026-05-19T03:27:19.723302
+https://kyc.etoro.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: etoro.com | Open redirect to external domain: etoro.com,https://kyc.etoro.com//api/snapshots,2026-05-19T03:28:03.263126
+https://kyc-src.etoro.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.etoro.com | Open redirect to external domain: www.etoro.com | Open redirect via login redirect parameter,https://kyc-src.etoro.com//api/snapshots,2026-05-19T03:28:53.379825
+https://kyc-src.etoro.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://kyc-src.etoro.com/api/snapshots/50,2026-05-19T03:28:53.379825
+https://etoropartners.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:29:40.561702
+https://etorologsapi.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:32:30.589845
+https://delta.app,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:32:33.464227
+https://com.etoro.wallet,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:36:38.142480
+https://com.etoro.openbook,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:36:39.320904
+https://charts.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:36:40.399803
+https://cashier.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:37:52.389039
+https://cashier-src.etoro.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.etoro.com | Open redirect to external domain: www.etoro.com | Open redirect via login redirect parameter,https://cashier-src.etoro.com//api/snapshots,2026-05-19T03:37:55.089741
+https://cashier-src.etoro.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://cashier-src.etoro.com/api/snapshots/50,2026-05-19T03:37:55.089741
+https://candle.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:38:41.562581
+https://candle-src.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:38:43.961845
+https://billing.etoro.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.etoro.com | Open redirect to external domain: www.etoro.com | Open redirect via login redirect parameter,https://billing.etoro.com//api/snapshots,2026-05-19T03:38:45.111360
+https://billing.etoro.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://billing.etoro.com/api/snapshots/50,2026-05-19T03:38:45.111360
+https://billing-pci.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:39:29.622124
+https://api.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:40:37.941927
+https://aggregator.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:40:41.198973
+https://templates.etoro.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.etoro.com | Open redirect to external domain: www.etoro.com | Open redirect via login redirect parameter,https://templates.etoro.com//api/snapshots,2026-05-19T03:40:43.551152
+https://templates.etoro.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://templates.etoro.com/api/snapshots/50,2026-05-19T03:40:43.551152
+https://etorox.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.etoro.com | Open redirect to external domain: www.etoro.com | Open redirect via login redirect parameter,https://etorox.com//api/snapshots,2026-05-19T03:41:27.410128
+https://etorox.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://etorox.com/api/snapshots/50,2026-05-19T03:41:27.410128
+https://api-portal.etoro.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:42:00.489692
+https://www.etsy.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:47:33.715156
+https://etsypayments.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:47:35.776993
+https://blog.etsy.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:47:37.241099
+https://careers.etsy.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:47:40.505916
+https://help.etsy.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://help.etsy.com//api/snapshots,2026-05-19T03:48:07.258403
+https://community.etsy.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://community.etsy.com//api/snapshots,2026-05-19T03:51:00.060575
+https://bugcrowd.charm.felixforus.ca,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:55:29.830186
+https://bugcrowd.lucky.felixforus.ca,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:56:52.593512
+https://financialforce.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:58:41.691270
+https://sb-console-api.fireblocks.io,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:59:04.917137
+https://sb-mobile-api.fireblocks.io,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:59:07.680548
+https://sandbox-api.fireblocks.io,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:59:10.523394
+https://fivetran.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T03:59:13.323101
+https://flo.uri.sh,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:00:30.049456
+https://flourish.studio,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:01:38.841292
+https://xyzbmojn.net,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:03:06.546469
+https://flourish-user-templates.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:04:19.895901
+https://flourish-user-preview.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:04:22.976752
+https://staging.gearset.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:04:26.272753
+https://hipaa.staging.gearset.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:05:44.550153
+https://staging.claytonapp.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://staging.claytonapp.com//api/snapshots,2026-05-19T04:05:47.497045
+https://app.glean.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:07:09.685784
+https://www.hostgator.com.br,2024.11.0,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://www.hostgator.com.br//api/snapshots,2026-05-19T04:08:30.225928
+https://financeiro.hostgator.com.br,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:10:47.751644
+https://www.cultbeauty.co.uk,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:12:14.934219
+https://www.lookfantastic.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:12:34.249920
+https://www.myprotein.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:12:54.338657
+https://www.myvitamins.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:13:13.893546
+https://www.arrowfilms.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:13:32.495301
+https://www.mankind.co.uk,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:13:52.836263
+https://www.illamasqua.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,Snapshot enumeration confirmed - 1/50 test IDs accessible. Sample accessible IDs: [1],https://www.illamasqua.com/api/snapshots/shared/50,2026-05-19T04:14:10.723817
+https://www.matalan.co.uk,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:14:34.904582
+https://www.enjoyselfish.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:14:55.595469
+https://chrome.google.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:15:21.338937
+https://content-server.ibotta.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:16:06.576445
+https://api.ibotta.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:16:09.949836
+https://api.ibops.net,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:17:42.056884
+https://api.int.ibops.net,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:17:45.357923
+https://ibotta.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:18:48.572274
+https://backend.ibotta.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:19:47.607496
+https://www.ifood.com.br,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:21:11.995869
+https://marketplace.ifood.com.br,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:21:14.152538
+https://gestordepedidos.ifood.com.br,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:21:16.092831
+https://wsloja.ifood.com.br,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:21:18.285973
+https://shop.ifood.com.br,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:21:20.333552
+https://static-images.ifood.com.br,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:21:22.407498
+https://developer.ifood.com.br,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:21:24.664940
+https://api.fstr.rocks,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:23:21.560197
+https://rc.fstr.rocks,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:23:24.855540
+https://www.zoop.com.br,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:23:27.895406
+https://www.zoop.ws,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:23:31.040737
+https://www.minhaconta.zoop.com.br,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:23:32.178887
+https://dash.zoop.com.br,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:23:35.263154
+https://contadigital.ifoodpago.com.br,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:23:38.781731
+https://portal.ifoodpago.com.br,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:23:41.138719
+https://www.cloudvector.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.imperva.com | Open redirect to external domain: www.imperva.com | Open redirect via login redirect parameter,https://www.cloudvector.com//api/snapshots,2026-05-19T04:23:43.256652
+https://supportportal.thalesgroup.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:30:25.184925
+https://indeed.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:31:55.286521
+https://apis.indeed.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:31:57.352723
+https://resume.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:31:59.319650
+https://wowjobs.ca,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:32:01.332165
+https://api.intercom.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:32:04.313686
+https://app.intercom.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:32:05.428167
+https://app.intercom.io,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:33:28.978847
+https://www.intercom.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:34:53.050028
+https://mcp.intercom.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:37:25.622853
+https://api-iam.intercom.io,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:37:52.237733
+https://fin.ai,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:37:55.397887
+https://app.fin.ai,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:39:02.973820
+https://www.carsdirect.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:40:26.445462
+https://pets.webmd.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:40:28.448470
+https://member.webmd.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:40:31.780214
+https://www.mdedge.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect via login redirect parameter,https://www.mdedge.com//api/snapshots,2026-05-19T04:42:21.443757
+https://www.mdedge.com,,CVE-2021-39226,MEDIUM,Snapshot Enumeration,"Snapshot enumeration confirmed - 50/50 test IDs accessible. Sample accessible IDs: [1, 2, 3, 4, 5]",https://www.mdedge.com/dashboard/snapshot/50,2026-05-19T04:42:21.443757
+https://accounts.webmd.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: member.webmd.com | Open redirect to external domain: member.webmd.com | Open redirect via login redirect parameter,https://accounts.webmd.com//api/snapshots,2026-05-19T04:43:25.454919
+https://powerpak.com,2024.11.0,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.powerpak.com | Open redirect to external domain: www.powerpak.com | Open redirect via login redirect parameter,https://powerpak.com//api/snapshots,2026-05-19T04:45:37.559701
+https://profreg.medscape.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:47:20.312125
+https://www.globalacademycme.com,,CVE-2025-4123,CRITICAL,Path Traversal & Open Redirect,Open redirect to external domain: www.medscapelive.com | Open redirect to external domain: www.medscapelive.com | Open redirect via login redirect parameter,https://www.globalacademycme.com//api/snapshots,2026-05-19T04:47:23.266208
+https://www.webmd.com,,N/A,N/A,No vulnerabilities found,,,2026-05-19T04:49:57.594118

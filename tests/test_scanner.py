@@ -491,7 +491,7 @@ class TestHTMLReportGeneration(unittest.TestCase):
 
         try:
             self.scanner._save_html_report(self.sample_results, temp_path)
-            with open(temp_path, 'r') as f:
+            with open(temp_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             self.assertIn('<html', content)
             self.assertIn('CVE-2021-43798', content)
@@ -501,6 +501,22 @@ class TestHTMLReportGeneration(unittest.TestCase):
             self.assertIn('</html>', content)
         finally:
             os.unlink(temp_path)
+
+    @patch('builtins.print')
+    def test_generate_report_uses_next_available_numbered_filename(self, mock_print):
+        """Existing report files should force the next numbered basename"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            base_path = os.path.join(temp_dir, 'report')
+
+            for extension in ('.json', '.html', '.csv'):
+                with open(f'{base_path}_1001{extension}', 'w', encoding='utf-8') as f:
+                    f.write('existing')
+
+            self.scanner.generate_report(self.sample_results, base_path)
+
+            for extension in ('.json', '.html', '.csv'):
+                self.assertTrue(os.path.exists(f'{base_path}_1002{extension}'))
+                self.assertTrue(os.path.exists(f'{base_path}_1001{extension}'))
 
     @patch('scanner.time.sleep', return_value=None)
     def test_scan_from_file_returns_partial_results_on_interrupt(self, mock_sleep):
