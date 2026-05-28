@@ -74,7 +74,7 @@ Ready to write some code? Great! Here's what we're looking for:
 ### Local Development Setup
 
 1. **Clone the repository**  
-   `git clone https://github.com/your-username/Grafana-Final-Scanner.git`
+   `git clone https://github.com/Zierax/Grafana-Final-Scanner.git`
 
 2. **Set up a virtual environment** (recommended)  
    ```bash
