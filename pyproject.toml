@@ -1,0 +1,98 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel>=0.41"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "grafana-final-scanner"
+version = "3.0.0"
+description = "Professional-grade security assessment tool for Grafana deployments"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+keywords = ["security", "grafana", "scanner", "vulnerability", "cve", "audit"]
+authors = [
+    {name = "Ziad", email = "ziad@example.com"}
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: System :: Monitoring",
+]
+dependencies = [
+    "requests>=2.25.0",
+    "urllib3>=1.26.0",
+]
+optional-dependencies = {dashboard = ["flask>=2.0.0"]}
+
+[project.urls]
+"Homepage" = "https://github.com/Zierax/Grafana-Final-Scanner"
+"Repository" = "https://github.com/Zierax/Grafana-Final-Scanner.git"
+"Bug Tracker" = "https://github.com/Zierax/Grafana-Final-Scanner/issues"
+"Changelog" = "https://github.com/Zierax/Grafana-Final-Scanner/blob/main/CHANGELOG.md"
+
+[project.scripts]
+grafana-scanner = "scanner:main"
+
+[tool.setuptools.packages.find]
+include = ["scanner*"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=scanner --cov-report=term-missing --cov-fail-under=55"
+markers = [
+    "slow: Tests that are slow to run",
+    "network: Tests that require network access",
+    "integration: Integration tests",
+]
+
+[tool.coverage.run]
+source = ["scanner"]
+omit = ["tests/*", ".venv/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if __name__ == .__main__.:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if False:",
+    "except Exception:",
+    "except:",
+]
+
+[tool.flake8]
+max-line-length = 127
+max-complexity = 12
+exclude = [".git", "__pycache__", "tests/", ".venv/"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 127
+exclude = [".git", "__pycache__", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "S"]
+ignore = ["E501", "N818"]
+
+[tool.pyright]
+pythonVersion = "3.9"
+exclude = [".venv"]

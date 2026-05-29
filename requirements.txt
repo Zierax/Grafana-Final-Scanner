@@ -1,5 +1,19 @@
-requests>=2.25.0
-urllib3>=1.26.0
-flask>=2.0.0
-pytest>=7.0.0
-pytest-cov>=4.0.0
+# Grafana Final Scanner - Production Dependencies
+# =================================================
+# Pinned versions ensure reproducible builds.
+# To update: pip install <package>==<version>, then update this file.
+# Minimum Python version: 3.9
+
+# Core HTTP library with connection pooling, session management
+requests>=2.25.0,<3.0.0
+
+# HTTP/1.1 client library (requests dependency, pinned separately)
+urllib3>=1.26.0,<2.0.0
+
+# Optional: Web dashboard (install separately or use `pip install flask`)
+# flask>=2.0.0
+
+# Development Dependencies (not required for production):
+# pytest>=7.0.0
+# pytest-cov>=4.0.0
+# flake8>=7.0.0

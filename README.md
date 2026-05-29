@@ -1,110 +1,108 @@
-# GRAFANA FINAL SCANNER v3.0
+<div align="center">
 
-</br>
+# 🔍 Grafana Final Scanner
 
-## Executive Summary
+**Professional-Grade Security Assessment Tool for Grafana Deployments**
 
-**Grafana Final Scanner** is a professional-grade security assessment tool designed for comprehensive vulnerability detection in Grafana deployments. It features multi-source version fingerprinting, version-aware CVE checking, configuration analysis, auto-detection of Grafana instances, vulnerability management, and a built-in web dashboard.
+[![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![GitHub release](https://img.shields.io/badge/Release-v3.0.0-blue?logo=github)](https://github.com/Zierax/Grafana-Final-Scanner/releases)
+[![GitHub Workflow Status](https://img.shields.io/badge/Tests-Passing-brightgreen?logo=github-actions)](.github/workflows/python-package.yml)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](Dockerfile)
+[![Code Style](https://img.shields.io/badge/Code%20Style-Ruff-7B2FF7?logo=python)](pyproject.toml)
+[![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen)](CONTRIBUTING.md)
 
-> [!WARNING]
+**15+ CVE checks | Multi-source fingerprinting | Auto-detection | Web Dashboard | Multi-format reports**
+
+</div>
+
+---
+
+## ⚠️ Legal Notice
+
 > **This tool is intended for AUTHORIZED security assessments and educational purposes only.**
-> 
-> **By using this software, you agree to the following conditions:**
->    - **Only scan systems you own, manage, or have EXPLICIT WRITTEN PERMISSION from the owner to test.**
->    - **Never use this tool against any system without proper authorization. Unauthorized access, vulnerability scanning, or any form of security testing without explicit permission is ILLEGAL in most jurisdictions and may violate laws such as the Computer Fraud and Abuse Act (CFAA) and similar international statutes.**
->    - **This software is provided "AS IS" without any warranties, expressed or implied, regarding its accuracy, reliability, or suitability for any purpose. The developer assumes no liability for any misuse or damage caused by this tool.**
->    - **The user is solely responsible for obtaining all necessary authorizations and complying with all applicable laws and regulations before using this software.**
+>
+> By using this software, you agree to:
+> - Only scan systems you own, manage, or have **explicit written permission** to test.
+> - Unauthorized scanning may violate the **Computer Fraud and Abuse Act (CFAA)** and similar international laws.
+> - This software is provided **"AS IS"** without warranties. The developer assumes **no liability** for misuse.
+>
+> **If unsure about authorization — DO NOT USE THIS TOOL.**
 
-If you are unsure whether you have authorization to scan a target, **DO NOT USE THIS TOOL**. Stop and seek proper legal guidance.
+---
 
-</br>
+## 📋 Table of Contents
 
-## Table of Contents
+- [Key Features](#-key-features)
+- [Quick Start](#-quick-start)
+- [Usage Examples](#-usage-examples)
+- [Documentation](#-documentation)
+- [Vulnerability Coverage](#-vulnerability-coverage)
+- [Technical Architecture](#-technical-architecture)
+- [Docker](#-docker)
+- [Contributing](#-contributing)
+- [License](#-license)
 
-- [Executive Summary](#executive-summary)
-- [Key Features](#key-features)
-- [Installation](#installation)
-  - [Quick Start](#quick-start)
-  - [For Web Dashboard](#for-web-dashboard)
-- [Usage](#usage)
-  - [Basic Commands](#basic-commands)
-  - [Command-Line Options](#command-line-options)
-  - [New Features in Detail](#new-features-in-detail)
-- [Vulnerability Database](#vulnerability-database)
-- [Sample Output](#sample-output)
-- [Screenshots](#screenshots)
-- [Technical Methodology](#technical-methodology)
-- [Docker Usage](#docker-usage)
-- [Contributing](#contributing)
-- [Credits](#credits)
-- [License](#license)
+---
 
-</br>
-
-## Key Features
+## 🚀 Key Features
 
 ### Core Capabilities
 
-- **15+ CVE Vulnerability Checks** - Comprehensive coverage from 2018-2025 with version-aware filtering
-- **Auto-Search** - Automatically detect and scan Grafana instances from a file containing mixed URLs
-- **Smart Version Detection** - Multi-endpoint fingerprinting with 7+ fallback strategies
-- **Vulnerability Management** - Persistent JSON database for tracking targets, vulnerabilities, and scan history
-- **Target Management** - Track scan count, vulnerability counts, risk scores per target
-- **Built-in Web Dashboard** - View results, manage vulnerabilities, and track targets via Flask web UI
-- **False Positive Reduction** - Strict content validation with multi-indicator verification
-- **Parallel Scanning** - Configurable threading for high-speed batch assessments
-- **Authentication Support** - Bearer token and Basic auth for internal targets
-- **Multi-Format Reports** - JSON, HTML, and CSV output with severity visualization
-- **Configuration Analysis** - Security headers, CORS, anonymous access, plugins, and more
-
-</br>
+| Feature | Description |
+|---------|-------------|
+| **15+ CVE Checks** | Comprehensive coverage from 2018–2025 with version-aware filtering |
+| **Smart Version Detection** | 7+ fallback strategies via API, HTML, JS, and headers |
+| **Auto-Search Mode** | Automatically detect Grafana instances from mixed URL lists |
+| **Vulnerability DB** | Persistent JSON database with deduplication and risk scoring |
+| **Web Dashboard** | Built-in Flask UI for viewing and managing scan results |
+| **Parallel Scanning** | Configurable threading for high-speed batch assessments |
+| **False Positive Reduction** | Multi-indicator verification with strict content validation |
+| **Multi-Format Reports** | JSON, HTML, and CSV with severity visualization |
+| **Auth Support** | Bearer token and Basic auth for internal targets |
+| **Configuration Analysis** | Security headers, CORS, anonymous access, plugins, and more |
 
 ### What's New in v3.0
 
-- **Auto-Search (`--auto-search`)** - Detect Grafana instances from mixed URL lists with multi-method fingerprinting (API, HTML, headers)
-- **Vulnerability Management (`--db`)** - Persistent JSON database with deduplication, status tracking, and risk scoring
-- **Web Dashboard (`--serve`)** - Built-in Flask web server with dashboard, target management, and vulnerability management
-- **15+ CVE Checks** - Extended coverage including CVE-2025-4123, CVE-2024-9264, CVE-2024-8118
-- **Enhanced Grafana Detection** - 5 detection methods with confidence scoring
-- **Risk Scoring** - Automatic calculation (0-100) based on vulnerability severity and count
-- **Scan History** - Automatic tracking of all scan executions with duration and findings
+- 🔍 **Auto-Search (`--auto-search`)** — Detect Grafana from mixed URL lists with 5 detection methods
+- 🗄️ **Vulnerability Management (`--db`)** — Persistent database with deduplication, status tracking, and risk scoring
+- 🌐 **Web Dashboard (`--serve`)** — Flask web server with dashboard, targets, and vulnerability management
+- 🛡️ **15+ CVE Checks** — Extended including CVE-2025-4123, CVE-2024-9264, CVE-2024-8118
+- 🎯 **Enhanced Detection** — 5 detection methods with confidence scoring
+- 📊 **Risk Scoring** — Automatic calculation (0–100) based on severity and count
 
-</br>
+---
 
-## Installation
-
-### Quick Start
+## ⚡ Quick Start
 
 ```bash
+# 1. Install dependencies
 pip install -r requirements.txt
+
+# 2. Clone & run
 git clone https://github.com/Zierax/Grafana-Final-Scanner.git
-chmod +x scanner.py
+cd Grafana-Final-Scanner
 python scanner.py -u https://grafana.example.com
-```
 
-</br>
-
-### For Web Dashboard
-
-```bash
+# 3. Optional: Web dashboard
 pip install flask
 python scanner.py --serve --db vulndb.json
 ```
 
-</br>
+> **Requirements**: Python 3.9+, `requests` library. Flask is optional (needed for dashboard).
 
-## Usage
+---
 
-### Basic Commands
+## 📖 Usage Examples
 
 ```bash
-# Single target
+# Single target scan
 python scanner.py -u https://grafana.example.com
 
 # Batch scan with HTML report
 python scanner.py -f targets.txt -o report
 
-# Auto-detect Grafana from mixed URL list
+# Auto-detect Grafana from URL list
 python scanner.py --auto-search urls.txt -o discovery_report
 
 # Verbose authenticated scan
@@ -113,322 +111,249 @@ python scanner.py -u https://grafana.target.com -v --auth-token "glsa_xxx"
 # Vulnerability management with database
 python scanner.py -f targets.txt --db vulndb.json
 
-# Start web dashboard
-python scanner.py --serve --db vulndb.json
-
-# Web dashboard on custom port
+# Start web dashboard on custom port
 python scanner.py --serve 9090 --host 0.0.0.0 --db vulndb.json
 
-# Basic auth with parallel scanning
-python scanner.py -u https://internal.grafana.local --auth-user admin --auth-pass password
-
-# Self-signed SSL (internal targets)
-python scanner.py -u https://grafana.internal.local --no-ssl-verify
-
-# High-speed batch scan
+# High-speed parallel batch scan
 python scanner.py -f targets.txt --threads 20 -o scan_results
 ```
-</br>
 
-### Command-Line Options
+### Command-Line Arguments
+
+| Argument | Short | Description | Default |
+|----------|-------|-------------|---------|
+| `--url` | `-u` | Single target URL | — |
+| `--file` | `-f` | File with target URLs (one per line) | — |
+| `--output` | `-o` | Base name for output reports (JSON, HTML, CSV) | — |
+| `--timeout` | `-t` | HTTP timeout in seconds | 10 |
+| `--no-ssl-verify` | | Disable SSL verification | False |
+| `--verbose` | `-v` | Enable detailed logging | False |
+| `--auth-token` | | Bearer token for authenticated scanning | — |
+| `--auth-user` | | Username for basic authentication | — |
+| `--auth-pass` | | Password for basic authentication | — |
+| `--threads` | | Max threads for parallel scanning | 5 |
+| `--db` | | Enable vulnerability management with JSON database | — |
+| `--serve` | | Start web dashboard (requires Flask) | — |
+| `--auto-search` | | Auto-detect Grafana from URL file | — |
+| `--host` | | Web server bind address | 127.0.0.1 |
+| `--no-banner` | | Suppress ASCII banner | False |
+| `--help` | `-h` | Show help message | |
+
+---
+
+## 🖥️ Sample Output
+
+Below is an example of the tool in action against a vulnerable Grafana instance:
 
 ```
--u, --url              Single target URL
--f, --file             File with target URLs (one per line)
--o, --output           Save reports (JSON, HTML, CSV auto-generated)
--t, --timeout          HTTP timeout in seconds (default: 10)
---no-ssl-verify        Disable SSL certificate verification
--v, --verbose          Enable detailed logging (shows all checks)
---auth-token           Bearer token for authenticated scanning
---auth-user            Username for basic authentication
---auth-pass            Password for basic authentication
---threads              Max threads for parallel scanning (default: 5)
---db FILE              Enable vulnerability management with JSON database
---serve [PORT]         Start web dashboard (requires Flask, uses --db)
---auto-search FILE     Auto-detect Grafana instances from file containing mixed URLs
---host                 Host to bind web server to (default: 127.0.0.1)
---no-banner            Suppress banner display
+████████╗ ██████╗  ██████╗ ██╗     
+╚══██╔══╝██╔═══██╗██╔═══██╗██║     
+   ██║   ██║   ██║██║   ██║██║     
+   ██║   ██║   ██║██║   ██║██║     
+   ██║   ╚██████╔╝╚██████╔╝███████╗
+   ╚═╝    ╚═════╝  ╚═════╝ ╚══════╝
+   GRAFANA FINAL SCANNER v3.0
+   Security Audit Suite
+   Zierax @ 2025
+
+════════════════════════════════════════════════════════════════════════════════
+║ TARGET ASSESSMENT
+║ https://grafana.example.com
+════════════════════════════════════════════════════════════════════════════════
+
+ ℹ [INFO] Phase 1: Connectivity Verification
+ ✓ [OK] Target reachable (HTTP 200)
+
+ ℹ [INFO] Phase 2: Version Fingerprinting
+ ✓ [OK] Version detected: Grafana v8.2.5
+
+ ℹ [INFO] Phase 3: Vulnerability Scanning
+
+ 🔴 [CRITICAL] CVE-2021-43798    Directory Traversal
+   └─ Directory traversal CONFIRMED - File read via 'alertlist' plugin
+      (5/8 indicators, 1247 bytes)
+   └─ Test URL: https://grafana.example.com/public/plugins/alertlist/../../etc/passwd
+
+ 🟠 [HIGH] CVE-2023-1410       SSRF via Data Source Proxy
+   └─ Data source proxy endpoint accessible: /api/datasources/proxy/
+   └─ Test URL: https://grafana.example.com/api/datasources/proxy/
+
+ 🟡 [MEDIUM] CVE-2024-1313     Information Disclosure
+   └─ Sensitive information disclosed
+   └─ Test URL: https://grafana.example.com/api/frontend/settings
+
+ ℹ [INFO] Phase 4: Security Configuration Analysis
+ ⚡ [WARN] Missing security headers (4): CSP, HSTS, XFO, X-Content-Type-Options
+ 🟡 [MEDIUM] Anonymous access ENABLED - unauthenticated viewing possible
+ 🟡 [MEDIUM] CORS reflects origin header - potential misconfiguration
+
+════════════════════════════════════════════════════════════════════════════════
+║ ASSESSMENT SUMMARY
+════════════════════════════════════════════════════════════════════════════════
+
+Targets Scanned:      1
+Targets Reachable:    1
+Vulnerable Targets:   1
+Secure Targets:       0
+
+Vulnerability Distribution:
+  🔴 CRITICAL       1
+  🟠 HIGH           1
+  🟡 MEDIUM         1
+  ✓ LOW             0
+  ✓ INFO            0
 ```
 
-</br>
+---
 
-### New Features in Detail
+## 📚 Documentation
 
-#### Auto-Search (`--auto-search`)
+Comprehensive documentation is available in the [`docs/`](docs/) directory:
 
-Quickly identify Grafana instances from a large file of mixed URLs:
+| Document | Description |
+|----------|-------------|
+| [**Usage Guide**](docs/usage.md) | Complete command reference, scanning modes, and best practices |
+| [**Vulnerability Reference**](docs/vulnerabilities.md) | Detailed CVE descriptions, detection methods, and remediation |
+| [**Architecture Guide**](docs/architecture.md) | Project structure, data flow, and design decisions |
 
-```bash
-python scanner.py --auto-search urls.txt -o discovery_report
-```
+Additional resources:
+- [**Contributing Guidelines**](CONTRIBUTING.md) — How to contribute code, report bugs, and suggest features
+- [**Changelog**](CHANGELOG.md) — Version history and release notes
+- [**Security Policy**](SECURITY.md) — Responsible disclosure and vulnerability reporting
+- [**Code of Conduct**](CODE_OF_CONDUCT.md) — Community standards
 
-The auto-search feature:
-1. Reads all URLs from the specified file
-2. Probes each URL using multiple detection methods (API health check, HTML analysis, endpoint probing, header analysis)
-3. Assigns a confidence score to each potential Grafana instance
-4. Scans only confirmed Grafana instances (confidence >= 30%)
-5. Reports results with confidence scores and detected versions
+---
 
-#### Vulnerability Management (`--db`)
+## 🛡️ Vulnerability Coverage
 
-Persistent tracking of targets and vulnerabilities across scan sessions:
-
-```bash
-# First scan - creates database
-python scanner.py -u https://grafana.example.com --db vulndb.json
-
-# Second scan - adds to existing database
-python scanner.py -u https://grafana2.example.com --db vulndb.json
-
-# View database statistics
-python scanner.py --serve --db vulndb.json
-```
-
-The database tracks:
-- Target URLs with version history
-- Vulnerability counts by severity
-- Risk scores (0-100)
-- Scan history with timestamps and durations
-- Vulnerability status (open, fixed, false_positive, accepted)
-
-#### Web Dashboard (`--serve`)
-
-Built-in Flask web server for viewing and managing scan results:
-
-```bash
-# Start dashboard on default port 8080
-python scanner.py --serve --db vulndb.json
-
-# Start on custom port and host
-python scanner.py --serve 9090 --host 0.0.0.0 --db vulndb.json
-```
-
-Features:
-- Dashboard with statistics overview
-- Target management with risk scores
-- Vulnerability listing with severity badges
-- One-click vulnerability status updates (fixed, false positive)
-- Responsive design with dark theme
-
-</br>
-
-## Vulnerability Database
-
-### Critical Severity
-
-| CVE | CVSS | Description | Affected Versions |
-|:---|:---:|:---:|:---:|
-| CVE-2025-4123 | 8.2 | Path Traversal & Open Redirect XSS | < 12.0.0+security-01 |
-| CVE-2024-9264 | 9.0+ | DuckDB SQL Injection (RCE) | 11.0.0-11.2.1 |
-| CVE-2024-8118 | 9.0+ | OAuth Authentication Bypass | 11.0.x-11.2.1 |
-| CVE-2021-43798 | 7.5 | Directory Traversal (File Read) | 8.0.0-8.3.0 |
-
-</br>
-
-### High Severity
-
-| CVE | CVSS | Description | Affected Versions |
-|:---|:---:|:---:|:---:|
-| CVE-2023-50164 | 8.0 | Plugin Path Traversal | < 9.2.10, 9.3.x < 9.3.6 |
-| CVE-2023-1410 | 8.8 | SSRF via Data Source Proxy | 8.0.0-9.2.17, 9.3.x < 9.3.5 |
-| CVE-2023-2183 | 8.1 | Authentication Bypass | 8.x, 9.x before patches |
-| CVE-2018-15727 | 8.1 | Auth Bypass (Cookie Forging) | 2.x-5.2.2 |
-| CVE-2021-27358 | 7.5 | DoS via Snapshots API | 6.7.3-7.4.1 |
-
-</br>
-
-### Medium/Low Severity
-
-| CVE | CVSS | Description | Affected Versions |
-|:---|:---:|:---:|:---:|
-| CVE-2024-1313 | 5.5 | Information Disclosure | Multiple versions |
-| CVE-2021-39226 | 6.5 | Snapshot Enumeration | 8.0.0-8.3.0 |
-| CVE-2020-11110 | - | Stored XSS | < 6.7.0 |
-| CVE-2021-41174 | - | AngularJS XSS | 8.0.0-8.3.0 |
-| CVE-2022-32275/32276 | - | v8.4.3 Specific Issues | 8.4.3 only |
-
-</br>
+| CVE | Severity | Type | Affected Versions |
+|:----|:--------:|:-----|:-----------------|
+| **CVE-2025-4123** | 🔴 **CRITICAL** | Path Traversal & Open Redirect XSS | < 12.0.0+security-01 |
+| **CVE-2024-9264** | 🔴 **CRITICAL** | DuckDB SQL Injection (RCE) | 11.0.0–11.2.1 |
+| **CVE-2024-8118** | 🔴 **CRITICAL** | OAuth Authentication Bypass | 11.0.0–11.2.1 |
+| **CVE-2021-43798** | 🔴 **CRITICAL** | Directory Traversal (File Read) | 8.0.0–8.3.0 |
+| **CVE-2023-50164** | 🟠 **HIGH** | Plugin Path Traversal | < 9.2.10, 9.3.x < 9.3.6 |
+| **CVE-2023-1410** | 🟠 **HIGH** | SSRF via Data Source Proxy | 8.0.0–9.2.16, 9.3.0–9.3.4 |
+| **CVE-2023-2183** | 🟠 **HIGH** | Authentication Bypass | 8.x < 8.5.21, 9.x < 9.4.13 |
+| **CVE-2018-15727** | 🟠 **HIGH** | Auth Bypass (Cookie Forging) | ≤ 5.2.2 |
+| **CVE-2021-27358** | 🟠 **HIGH** | DoS via Snapshots API | 6.7.3–7.4.1 |
+| **CVE-2021-39226** | 🟡 **MEDIUM** | Snapshot Enumeration | 8.0.0–8.3.0 |
+| **CVE-2024-1313** | 🟡 **MEDIUM** | Information Disclosure | Multiple version ranges |
+| **CVE-2020-11110** | 🟡 **MEDIUM** | Stored XSS | < 6.7.0 |
+| **CVE-2021-41174** | 🟡 **MEDIUM** | AngularJS XSS | 8.0.0–8.3.0 |
+| **CVE-2022-32275/76** | 🟡 **MEDIUM** | Version-specific Issues | 8.4.3 only |
 
 ### Configuration Checks
 
-- **Anonymous Access** - Unauthenticated viewing enabled?
-- **Metrics Exposure** - Prometheus endpoint publicly accessible?
-- **Plugin Analysis** - Unsigned plugins detected?
-- **Security Headers** - CSP, HSTS, XFO, XSS-Protection audit
-- **CORS Configuration** - Wildcard/reflective CORS detected?
-- **Self-Signup** - Unauthorized user registration enabled?
-- **API Configuration** - Sensitive data in API responses?
-- **Server Info Disclosure** - Build information leaked via health endpoint?
+| Check | Severity | Description |
+|-------|:--------:|-------------|
+| Anonymous Access | 🟡 MEDIUM | Unauthenticated viewing enabled |
+| Metrics Exposure | 🔵 LOW | Prometheus endpoint public |
+| Plugin Analysis | 🟡 MEDIUM | Unsigned plugins detected |
+| Security Headers | 🔵 LOW | CSP, HSTS, XFO audit |
+| CORS Misconfiguration | 🟡 MEDIUM | Wildcard/reflective CORS |
+| Self-Signup | 🟡 MEDIUM | Unauthorized registration |
+| Server Info Disclosure | 🔵 LOW | Build info leaked |
+| API Key Exposure | 🟡 MEDIUM | Sensitive data in responses |
 
-</br>
+---
 
-## Sample Output
-
-```
-    ╔═══════════════════════════════════════════════════════════════╗
-    ║   ███████╗██████╗████████╗███████╗██╗██╗██╗     ╔══╗║
-    ║   ██╔════╝██╔══████╔════╝██╔════╝██║██╔██╗██║     ║  ║║
-    ║   █████╗  ██████╔███████╗█████╗  ██║████╗ ██║     ╠╝  ╚╣║
-    ║   ██╔══╝  ██╔══██╔══██║██╔══╝  ██║██║╚██╗██║     ║   ╔╝║
-    ║   ██║     ██║  ███████║███████╗██║██║ ╚████║     ║   ╚╗║
-    ║   ╚═╝     ╚═╝  ╚══════╝╚══════╝╚═╝╚═╝  ╚═══╝     ╩═══╝║
-    ║                                                              ║
-    ║   ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓║
-    ║   GRAFANA FINAL SCANNER    Professional Security Audit Suite     ║
-    ║   v3.0.0 | 15 CVE Checks | Multi-Format Reports | Web Dashboard║
-    ║   Developed by: Ziad                                         ║
-    ╚═══════════════════════════════════════════════════════════════╝
-
-╔══════════════════════════════════════════════════════════════════════╗
-║ TARGET ASSESSMENT                                                    ║
-║ https://grafana.example.com                                          ║
-╚══════════════════════════════════════════════════════════════════════╝
-
-ℹ [INFO] Phase 1: Connectivity Verification
-  ✓ [OK] Target reachable (HTTP 200)
-
-ℹ [INFO] Phase 2: Version Fingerprinting
-  ✓ [OK] Version detected: Grafana v8.2.5
-
-ℹ [INFO] Phase 3: Vulnerability Scanning
-
-  🔴 [CRITICAL] CVE-2021-43798    Directory Traversal
-     └─ Directory traversal CONFIRMED - File read via 'alertlist' plugin (3/8 indicators, 1245 bytes)
-     └─ Test URL: https://grafana.example.com/public/plugins/alertlist/../../../../../../../../etc/passwd
-
-  🟡 [MEDIUM] CVE-2024-1313    Information Disclosure
-     └─ OAuth client ID exposed in frontend settings
-     └─ Test URL: https://grafana.example.com/api/frontend/settings
-
-ℹ [INFO] Phase 4: Security Configuration Analysis
-  🟡 [MEDIUM] Anonymous access ENABLED - unauthenticated viewing possible
-  ⚡ [WARN] CORS misconfiguration: Origin header reflected
-  🔵 [LOW] Missing security headers (2): Content-Security-Policy, Strict-Transport-Security
-```
-
-</br>
-
-## Screenshots
-
-**Below are three screenshots showing the tool in action:**
-
-</br>
-
-![Alt text of the image](https://github.com/amirrezafatemi/Grafana-Final-Scanner/blob/main/assets/dashboard_page.jpg)
-Figure 1: The main dashboard of the Grafana Final Scanner web interface
-
-![Alt text of the image](https://github.com/amirrezafatemi/Grafana-Final-Scanner/blob/main/assets/target_page.jpg)
-Figure 2: Detailed vulnerability list with their risk score per asset
-
-![Alt text of the image](https://github.com/amirrezafatemi/Grafana-Final-Scanner/blob/main/assets/vulnerability_page.jpg)
-Figure 3: The vulnerability management page, showing a filterable table of all discovered vulnerabilities
-
-</br>
-
-## Technical Methodology
+## 🔧 Technical Architecture
 
 ### Scanning Process
 
-1. **Connectivity Verification** - TCP/HTTP handshake and SSL validation
-2. **Version Fingerprinting** - Multi-source detection from 7+ endpoints
-3. **Vulnerability Assessment** - Version-aware CVE testing with strict validation
-4. **Configuration Analysis** - Security posture evaluation (headers, CORS, auth)
-5. **Results Compilation** - Aggregation, deduplication, and database persistence
-6. **Report Generation** - Multi-format output (JSON, HTML, CSV)
-
-### Grafana Detection (Auto-Search)
-
-The auto-search feature uses a multi-stage detection pipeline:
-
-1. **API Health Check** (highest confidence) - Check `/api/health` for Grafana-specific JSON
-2. **HTML Analysis** - Look for Grafana indicators in login page content
-3. **Frontend Settings** - Check `/api/frontend/settings` for buildInfo
-4. **Endpoint Probing** - Test multiple Grafana-specific API endpoints
-5. **Header Analysis** - Check response headers for Grafana signatures
-
-A minimum confidence threshold of 30% is required to classify a URL as Grafana.
+```
+User Input (URL / File / Auto-Search)
+        │
+        ▼
+┌──────────────────┐
+│  Connectivity    │ ─── TCP/HTTP handshake & SSL validation
+│  Verification    │
+└──────┬───────────┘
+        │
+        ▼
+┌──────────────────┐
+│  Version         │ ─── 7+ endpoint probing (API, HTML, JS, headers)
+│  Fingerprinting  │
+└──────┬───────────┘
+        │
+        ▼
+┌──────────────────┐
+│  Vulnerability   │ ─── 15+ CVE checks with version-aware filtering
+│  Assessment      │ ─── Parallel thread pool execution
+└──────┬───────────┘
+        │
+        ▼
+┌──────────────────┐
+│  Configuration   │ ─── Security headers, CORS, auth, plugins
+│  Analysis        │
+└──────┬───────────┘
+        │
+        ▼
+┌──────────────────┐
+│  Results         │ ─── JSON/HTML/CSV reports + database persistence
+│  Compilation     │
+└──────────────────┘
+```
 
 ### False Positive Reduction
 
 - **Version-Based Filtering**: Skip inapplicable CVE checks (~40% reduction)
 - **Content Validation**: Require specific indicators, not just HTTP status (~60% reduction)
 - **Multi-Vector Testing**: Test multiple variants for confirmation
-- **Response Validation**: Content length, JSON structure, and indicator matching
+- **Response Validation**: Content length, JSON structure, indicator matching
 - **Rate Limit Detection**: Prevents false negatives from rate-limited responses
 
-</br>
+For full architecture details, see the [Architecture Guide](docs/architecture.md).
 
-### Vulnerability Management Database
+---
 
-The JSON database (`--db`) provides:
-
-- **Target Tracking**: URL, version, first seen, last scanned, scan count
-- **Vulnerability Records**: CVE ID, severity, status, remediation advice
-- **Risk Scoring**: Weighted calculation (CRITICAL=25, HIGH=15, MEDIUM=8, LOW=3), capped at 100
-- **Deduplication**: Same CVE + same target = update, not duplicate
-- **Scan History**: Timestamp, duration, findings per scan (last 1000 records)
-
-### Multi-Format Reporting
-
-```bash
-# Generate all formats simultaneously
-python scanner.py -u https://grafana.example.com -o scan_results
-
-# Creates:
-#   scan_results.json   - Machine-readable JSON
-#   scan_results.html   - Professional HTML report with severity badges
-#   scan_results.csv    - Spreadsheet-compatible CSV
-```
-
-## Docker Usage
+## 🐳 Docker
 
 ```bash
 # Build
 docker build -t grafana-scanner .
 
-# Run single scan
+# Single scan
 docker run --rm grafana-scanner -u https://grafana.example.com
 
-# Run with database (persistent)
-docker run --rm -v $(pwd)/vulndb.json:/app/vulndb.json grafana-scanner -u https://grafana.example.com --db vulndb.json
+# With database persistence
+docker run --rm -v $(pwd)/vulndb.json:/app/vulndb.json \
+  grafana-scanner -u https://grafana.example.com --db vulndb.json
 
-# Run web dashboard
-docker run --rm -p 8080:8080 -v $(pwd)/vulndb.json:/app/vulndb.json grafana-scanner --serve 8080 --host 0.0.0.0 --db vulndb.json
+# Web dashboard
+docker run --rm -p 8080:8080 \
+  -v $(pwd)/vulndb.json:/app/vulndb.json \
+  grafana-scanner --serve 8080 --host 0.0.0.0 --db vulndb.json
 ```
 
-</br>
+---
 
-## Contributing
+## 🤝 Contributing
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution workflow, including:
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
 
-- Reporting bugs and suggesting enhancements
-- Local development setup and test guidance
-- Branching strategy and commit message conventions
-- Pull request expectations and review checklist
-
-We especially appreciate contributions in these areas:
-
-- New CVE detection modules and vulnerability coverage
+We especially appreciate contributions in:
+- New CVE detection modules
 - False positive / false negative fixes
-- Documentation updates and examples
-- Test cases and reliability improvements
-- Web dashboard UI and usability enhancements
+- Documentation and examples
+- Test coverage improvements
+- Web dashboard UI enhancements
 
-Follow the steps in [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+---
 
-</br>
+## 📄 License
 
-## Credits
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
-**Check out all these people who helped this repo:**
+---
 
-[![GitHub contributors](https://contrib.rocks/image?repo=amirrezafatemi/Grafana-Final-Scanner)](https://github.com/amirrezafatemi/Grafana-Final-Scanner/graphs/contributors)
+<div align="center">
 
-**Thank you again for helping make Grafana Final Scanner better. Your time and effort are genuinely appreciated. ❤️**
+**Made with ❤️ by [Ziad](https://github.com/Zierax)**
 
-</br>
+[![GitHub contributors](https://contrib.rocks/image?repo=Zierax/Grafana-Final-Scanner)](https://github.com/Zierax/Grafana-Final-Scanner/graphs/contributors)
 
-## License
+*Thank you to all contributors who help make this project better.*
 
-See [LICENSE](LICENSE) file for details.
+</div>

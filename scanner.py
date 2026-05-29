@@ -3462,7 +3462,6 @@ def print_banner():
 
 def main():
     """Main execution flow"""
-    print_banner()
     
     parser = argparse.ArgumentParser(
         description='Grafana Final Scanner - Professional Vulnerability Assessment Tool',
@@ -3539,9 +3538,8 @@ def main():
     
     args = parser.parse_args()
     
-    if args.no_banner:
-        # Clear the banner that was already printed
-        pass  # Banner already printed at top, but we respect the flag
+    if not args.no_banner:
+        print_banner()
     
     if not args.url and not args.file and not args.auto_search and args.serve is None:
         parser.print_help()

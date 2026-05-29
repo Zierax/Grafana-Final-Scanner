@@ -2,6 +2,84 @@
 
 All notable changes to the Grafana Final Scanner project will be documented in this file.
 
+## [3.0.0] - 2026-05-29
+
+### Added
+- **New CVEs (5 additional):**
+  - CVE-2025-4123 - "Grafana Ghost" Path Traversal & Open Redirect XSS (CRITICAL)
+  - CVE-2024-9264 - DuckDB SQL Injection (CRITICAL)
+  - CVE-2024-8118 - OAuth Authentication Bypass (CRITICAL)
+  - CVE-2024-1313 - Information Disclosure via API (MEDIUM)
+  - CVE-2023-2183 - Authentication Bypass via API (HIGH)
+
+- **Auto-Search Feature (`--auto-search`):**
+  - Multi-method Grafana instance detection (API, HTML, headers, endpoint probing)
+  - Confidence scoring (0-100%) with 30% detection threshold
+  - Parallel probing of URLs from mixed lists
+  - Version detection during discovery phase
+
+- **Vulnerability Management System (`--db`):**
+  - Persistent JSON database with target tracking
+  - Vulnerability deduplication by CVE + target URL
+  - Status tracking (open, confirmed, false_positive, fixed, accepted)
+  - Automatic risk scoring (0-100) per target
+  - Scan history with duration and findings tracking (last 1000 records)
+  - Thread-safe concurrent writes with RLock
+
+- **Web Dashboard (`--serve`):**
+  - Built-in Flask web server for viewing scan results
+  - Dashboard with statistics overview
+  - Target management with risk scores and version history
+  - Vulnerability listing with severity badges and status filters
+  - One-click vulnerability status updates
+  - Responsive design with dark theme
+
+- **Enhanced Grafana Detection:**
+  - 5 detection methods with multi-indicator validation
+  - API health check, HTML analysis, frontend settings, endpoint probing, header analysis
+  - Auto-detection from mixed URL lists
+
+- **Project Infrastructure:**
+  - `pyproject.toml` for modern Python packaging (PEP 621)
+  - `Makefile` for common development tasks (test, lint, build, docker)
+  - `SECURITY.md` with responsible disclosure policy
+  - `CODE_OF_CONDUCT.md` (Contributor Covenant 2.0)
+  - `docs/` directory with comprehensive documentation
+  - Improved `.gitignore` with project-specific exclusions
+  - Pinned `requirements.txt` with version constraints
+
+### Changed
+- **Version detection expanded** from 4 to 7+ endpoints
+- **Plugin coverage increased** for CVE-2021-43798 (5 → 35+ plugins)
+- **Snapshot enumeration range extended** for CVE-2021-39226 (5 → 50 IDs)
+- **Version comparison improved** with proper range-based checking
+- **False positive reduction enhanced** with stricter content validation
+- **CVE-2025-4123 detection expanded** with 7 test vectors
+- **README.md extensively rewritten** with improved structure, badges, and navigation
+- **CI/CD pipeline updated** with build summary job and improved caching
+- **Renamed** `requirments.txt` → `requirements.txt` (fixed typo)
+
+### Fixed
+- **False Positive Reduction:**
+  - CVE-2021-43798: Requires 3+ indicators AND content > 100 bytes
+  - CVE-2018-15727: Uses actual API endpoints instead of HTML text parsing
+  - CVE-2021-39226: Better JSON snapshot validation
+  - All CVEs: Proper HTTP status code differentiation
+  - Version-aware filtering prevents irrelevant CVE checks
+
+- **Error Handling Improvements:**
+  - Safe request wrapper with retry logic (2 retries)
+  - Graceful handling of connection errors, timeouts, SSL errors
+  - Rate limiting detection with automatic backoff
+  - Thread-safe logging with print lock
+
+### Security
+- Rate limiting detection to prevent scanner from being blocked (429, X-RateLimit-Remaining, Retry-After)
+- Connection retry with backoff
+- Safe request wrapper prevents crashes on network failures
+- Non-root user in Docker container
+- SSL verification configurable (default: disabled for flexibility)
+
 ## [2.0.0] - 2026-05-15
 
 ### Added
@@ -40,31 +118,21 @@ All notable changes to the Grafana Final Scanner project will be documented in t
   - Smart retry with backoff
 
 ### Changed
-- **Expanded version detection** from 4 to 7+ endpoints
-- **Wider plugin coverage** for CVE-2021-43798 (5 → 35+ plugins)
-- **More snapshot IDs** for CVE-2021-39226 (5 → 50 IDs)
-- **Improved version comparison** with proper range-based checking
-- **Better false positive reduction** with stricter content validation
-- **Enhanced CVE-2025-4123** with 7 test vectors instead of 2
-- **Renamed** `requirments.txt` → `requirements.txt` (fixed typo)
+- Expanded version detection from 4 to 7+ endpoints
+- Wider plugin coverage for CVE-2021-43798 (5 → 35+ plugins)
+- More snapshot IDs for CVE-2021-39226 (5 → 50 IDs)
+- Improved version comparison with proper range-based checking
+- Better false positive reduction with stricter content validation
+- Enhanced CVE-2025-4123 with 7 test vectors instead of 2
+- Renamed `requirments.txt` → `requirements.txt` (fixed typo)
 
 ### Fixed
-- **False Positive Reduction:**
-  - CVE-2021-43798: Requires 3+ indicators AND content > 100 bytes
-  - CVE-2018-15727: Uses actual API endpoints instead of HTML text parsing
-  - CVE-2021-39226: Better JSON snapshot validation
-  - All CVEs: Proper HTTP status code differentiation
-  - Version-aware filtering prevents irrelevant CVE checks
-
-- **Error Handling Improvements:**
-  - Safe request wrapper with retry logic
-  - Graceful handling of connection errors
-  - Better timeout management
+- False positive reduction across multiple CVEs
+- Error handling with safe request wrapper and retry logic
 
 ### Security
-- Added rate limiting detection to prevent scanner from being blocked
-- Implemented connection retry with exponential backoff
-- Safe request wrapper prevents crashes on network failures
+- Rate limiting detection to prevent scanner from being blocked
+- Connection retry with exponential backoff
 
 ## [1.0.0] - 2026-01-15
 
