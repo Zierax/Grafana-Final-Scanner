@@ -323,6 +323,13 @@ Every contribution matters. Contributors will be:
 - Mentioned in release notes for significant changes
 - Recognized in the repository's GitHub Insights
 
+
+# Contributes
+## Thanks for Your contrubiting to make the security community more "Secure"
+
+[![GitHub contributors](https://contrib.rocks/image?repo=Zierax/Grafana-Final-Scanner)](https://github.com/Zierax/Grafana-Final-Scanner/graphs/contributors)
+
+
 ---
 
 _<p align=center>This guide is inspired by the best practices of the open source community. Questions or suggestions for improving it? Open an issue!</p>_
