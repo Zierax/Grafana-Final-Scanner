@@ -348,11 +348,9 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ---
 
-<div align="center">
 
-**Made with ❤️ by [Ziad](https://github.com/Zierax)**
+**Made with ❤️ by [Ziad (Zierax)](https://github.com/Zierax)** And The contrubitures in [CONTRUBUTING.md](https://github.com/Zierax/Grafana-Final-Scanner/blob/main/CONTRIBUTING.md) 
 
-[![GitHub contributors](https://contrib.rocks/image?repo=Zierax/Grafana-Final-Scanner)](https://github.com/Zierax/Grafana-Final-Scanner/graphs/contributors)
 
 *Thank you to all contributors who help make this project better.*
 
