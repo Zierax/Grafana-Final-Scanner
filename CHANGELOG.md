@@ -2,7 +2,7 @@
 
 All notable changes to the Grafana Final Scanner project will be documented in this file.
 
-## [3.1.0] - 2025-07-07
+## [3.1.0] - 2026-07-07
 
 This release focuses on security hardening and reliability fixes identified in a
 full forensic code audit. It is recommended for all users, especially those who
@@ -41,7 +41,7 @@ expose the web dashboard or scan untrusted networks.
 - Removed marketing/emoji fluff from the banner and console output.
 - `requirements.txt` notes Flask as an optional dependency for `--serve`.
 
-## [3.0.0] - 2025-05-29
+## [3.0.0] - 2026-05-29
 
 ### Added
 - **New CVEs (5 additional):**
@@ -119,7 +119,7 @@ expose the web dashboard or scan untrusted networks.
 - Non-root user in Docker container
 - SSL verification configurable (default: enabled)
 
-## [2.0.0] - 2025-05-15
+## [2.0.0] - 2026-05-15
 
 ### Added
 - **New CVE Checks (3 additional):**
@@ -173,7 +173,7 @@ expose the web dashboard or scan untrusted networks.
 - Rate limiting detection to prevent scanner from being blocked
 - Connection retry with exponential backoff
 
-## [1.0.0] - 2025-01-15
+## [1.0.0] - 2026-01-15
 
 ### Added
 - Initial release with 10 CVE vulnerability checks
