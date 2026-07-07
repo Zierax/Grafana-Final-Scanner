@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Grafana Final Scanner detects 15+ CVEs across Grafana versions from 2018 to 2025. Each check includes version-aware filtering to reduce false positives.
+The Grafana Final Scanner detects 15+ CVEs across Grafana versions from 2018 to 2026. Each check includes version-aware filtering to reduce false positives.
 
 ## Severity Classification
 
