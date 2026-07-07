@@ -4,7 +4,7 @@ build-backend = "setuptools.backends._legacy:_Backend"
 
 [project]
 name = "grafana-final-scanner"
-version = "3.0.0"
+version = "3.1.0"
 description = "Professional-grade security assessment tool for Grafana deployments"
 readme = "README.md"
 license = {text = "MIT"}
