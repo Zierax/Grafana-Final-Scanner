@@ -36,7 +36,7 @@ jobs:
     - name: Lint with ruff
       run: |
         ruff check scanner.py tests/ --line-length=127 --ignore=E501,E731,W291,F841,N818 --statistics
-        echo "✓ Ruff linting passed"
+        echo "[OK] Ruff linting passed"
 
     - name: Lint with flake8
       run: |
@@ -62,7 +62,7 @@ jobs:
                 print(f'  {e}')
             exit(1)
         else:
-            print(f'✓ All {len(files)} Python files have valid syntax')
+            print(f'[OK] All {len(files)} Python files have valid syntax')
         "
 
     - name: Test with pytest
@@ -71,8 +71,8 @@ jobs:
 
     - name: Verify scanner imports
       run: |
-        python -c "from scanner import GrafanaFinalScanner, _positive_int, Colors, main, VulnerabilityDB, create_web_server, print_banner, FLASK_AVAILABLE; print('✓ All imports successful')"
-        python -c "from scanner import GrafanaFinalScanner; s = GrafanaFinalScanner(); print(f'✓ Scanner initialized (defaults: timeout={s.timeout}, threads={s.max_threads})')"
+        python -c "from scanner import GrafanaFinalScanner, _positive_int, Colors, main, VulnerabilityDB, create_web_server, print_banner, FLASK_AVAILABLE; print('[OK] All imports successful')"
+        python -c "from scanner import GrafanaFinalScanner; s = GrafanaFinalScanner(); print(f'[OK] Scanner initialized (defaults: timeout={s.timeout}, threads={s.max_threads})')"
 
   docker:
     name: Docker Build
@@ -99,7 +99,7 @@ jobs:
       run: |
         docker build -t grafana-scanner:test .
         docker run --rm grafana-scanner:test --help | head -5
-        echo "✓ Docker image built and tested successfully"
+        echo "[OK] Docker image built and tested successfully"
 
   summary:
     name: Build Summary
@@ -114,10 +114,10 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
         echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-        echo "| Tests | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-        echo "| Docker Build | ✅ Built |" >> $GITHUB_STEP_SUMMARY
+        echo "| Tests |  Passed |" >> $GITHUB_STEP_SUMMARY
+        echo "| Docker Build |  Built |" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Grafana Final Scanner v3.0.0**" >> $GITHUB_STEP_SUMMARY
+        echo "**Grafana Final Scanner v3.1.0**" >> $GITHUB_STEP_SUMMARY
         echo "- 15+ CVE checks with version-aware filtering" >> $GITHUB_STEP_SUMMARY
         echo "- Auto-search Grafana detection" >> $GITHUB_STEP_SUMMARY
         echo "- Vulnerability management with persistent database" >> $GITHUB_STEP_SUMMARY

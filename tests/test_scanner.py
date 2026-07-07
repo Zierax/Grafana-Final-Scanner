@@ -63,12 +63,11 @@ class TestGrafanaFinalScannerInit(unittest.TestCase):
     def test_default_values(self):
         """Default initialization values should be correct"""
         self.assertEqual(self.scanner.timeout, 10)
-        self.assertFalse(self.scanner.verify_ssl)
+        self.assertTrue(self.scanner.verify_ssl)
         self.assertFalse(self.scanner.verbose)
         self.assertEqual(self.scanner.max_threads, 5)
         self.assertIsNone(self.scanner.grafana_version)
         self.assertEqual(self.scanner.build_info, {})
-        self.assertFalse(self.scanner._rate_limited)
         # Verify initial stats
         self.assertEqual(self.scanner.stats['total_checks'], 0)
         self.assertEqual(self.scanner.stats['vulnerabilities_found'], 0)
@@ -399,31 +398,38 @@ class TestCheckRateLimit(unittest.TestCase):
         response = MagicMock()
         response.status_code = 429
         response.headers = {}
-        self.assertTrue(self.scanner._check_rate_limit(response))
-        self.assertTrue(self.scanner._rate_limited)
+        self.assertTrue(self.scanner._is_rate_limited_response(response))
 
     def test_x_rate_limit_remaining_zero(self):
         """X-RateLimit-Remaining: 0 should be detected"""
         response = MagicMock()
         response.status_code = 200
         response.headers = {'X-RateLimit-Remaining': '0'}
-        self.assertTrue(self.scanner._check_rate_limit(response))
-        self.assertTrue(self.scanner._rate_limited)
+        self.assertTrue(self.scanner._is_rate_limited_response(response))
 
     def test_retry_after_header(self):
         """Retry-After header should be detected"""
         response = MagicMock()
         response.status_code = 200
         response.headers = {'Retry-After': '60'}
-        self.assertTrue(self.scanner._check_rate_limit(response))
-        self.assertTrue(self.scanner._rate_limited)
+        self.assertTrue(self.scanner._is_rate_limited_response(response))
 
     def test_normal_response_not_rate_limited(self):
         """Normal response should not be rate limited"""
         response = MagicMock()
         response.status_code = 200
         response.headers = {}
-        self.assertFalse(self.scanner._check_rate_limit(response))
+        self.assertFalse(self.scanner._is_rate_limited_response(response))
+
+    def test_parse_retry_after(self):
+        """Retry-After should be parsed to an integer number of seconds"""
+        response = MagicMock()
+        response.headers = {'Retry-After': '30'}
+        self.assertEqual(self.scanner._parse_retry_after(response), 30)
+        response.headers = {}
+        self.assertEqual(self.scanner._parse_retry_after(response), 0)
+        response.headers = {'Retry-After': 'not-a-number'}
+        self.assertEqual(self.scanner._parse_retry_after(response), 0)
 
 
 class TestHTMLReportGeneration(unittest.TestCase):
@@ -521,13 +527,22 @@ class TestSafeRequest(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result.status_code, 200)
 
+    @patch('scanner.time.sleep')
     @patch('requests.Session.request')
-    def test_rate_limited_request_skipped(self, mock_request):
-        """If already rate limited, requests should be skipped"""
-        self.scanner._rate_limited = True
+    def test_rate_limited_request_retries(self, mock_request, mock_sleep):
+        """Rate-limited responses should be retried, not silently skipped"""
+        rl = MagicMock()
+        rl.status_code = 429
+        rl.headers = {}
+        ok = MagicMock()
+        ok.status_code = 200
+        ok.headers = {}
+        mock_request.side_effect = [rl, ok]
         result = self.scanner._safe_request('GET', 'https://example.com')
-        self.assertIsNone(result)
-        mock_request.assert_not_called()
+        self.assertIsNotNone(result)
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(mock_request.call_count, 2)
+        mock_sleep.assert_called()
 
 
 class TestColors(unittest.TestCase):

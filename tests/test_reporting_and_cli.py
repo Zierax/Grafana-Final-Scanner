@@ -533,7 +533,7 @@ class TestPrintBannerExtended(unittest.TestCase):
         print_banner()
         calls = [str(c) for c in mock_print.call_args_list]
         all_output = ' '.join(calls)
-        self.assertIn('3.0.0', all_output)
+        self.assertIn('3.1.0', all_output)
         self.assertIn('GRAFANA', all_output.upper())
         self.assertIn('SCANNER', all_output.upper())
 

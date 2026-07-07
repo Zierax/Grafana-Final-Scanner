@@ -615,7 +615,6 @@ class TestSafeRequestEdgeCases(unittest.TestCase):
 
         result = self.scanner._safe_request('GET', 'https://example.com')
         self.assertIsNone(result)
-        self.assertTrue(self.scanner._rate_limited)
 
     @patch('requests.Session.request')
     @patch('scanner.time.sleep', return_value=None)
@@ -629,7 +628,6 @@ class TestSafeRequestEdgeCases(unittest.TestCase):
 
         result = self.scanner._safe_request('GET', 'https://example.com')
         self.assertIsNone(result)
-        self.assertTrue(self.scanner._rate_limited)
 
     @patch('requests.Session.request')
     def test_json_exception_in_rate_limit_check(self, mock_request):

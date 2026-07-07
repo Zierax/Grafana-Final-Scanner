@@ -98,3 +98,6 @@ vulndb.json
 *.swp
 *.swo
 *~
+
+# Audit report (not for version control)
+audit.txt

@@ -38,6 +38,8 @@ from unittest.mock import MagicMock, patch, Mock, call
 # Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+import requests
+
 from scanner import (
     GrafanaFinalScanner, VulnerabilityDB, Colors,
     create_web_server, print_banner, _positive_int, FLASK_AVAILABLE
@@ -1427,14 +1429,23 @@ class TestUncoveredLines(unittest.TestCase):
                 result = scanner._safe_request('GET', 'https://example.com')
                 self.assertIsNone(result)
 
-    def test_safe_request_generic_exception_logging(self):
-        """Test verbose logging for generic exceptions"""
+    def test_safe_request_network_exception_caught(self):
+        """Network errors are caught, logged, and return None (do not crash)."""
         scanner = GrafanaFinalScanner(verbose=True)
         with patch('scanner.requests.Session.request') as mock_req:
-            mock_req.side_effect = RuntimeError("Unexpected error")
+            mock_req.side_effect = requests.exceptions.ConnectionError("refused")
             with patch.object(scanner, 'log') as mock_log:
                 result = scanner._safe_request('GET', 'https://example.com')
                 self.assertIsNone(result)
+                mock_log.assert_called()
+
+    def test_safe_request_unexpected_exception_surfaces(self):
+        """Non-network exceptions are not silently swallowed."""
+        scanner = GrafanaFinalScanner(verbose=True)
+        with patch('scanner.requests.Session.request') as mock_req:
+            mock_req.side_effect = RuntimeError("Unexpected error")
+            with self.assertRaises(RuntimeError):
+                scanner._safe_request('GET', 'https://example.com')
 
     def test_is_grafana_instance_health_partial(self):
         """Test /api/health with database key but no Grafana-specific data"""

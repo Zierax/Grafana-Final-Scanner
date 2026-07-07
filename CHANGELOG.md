@@ -2,7 +2,46 @@
 
 All notable changes to the Grafana Final Scanner project will be documented in this file.
 
-## [3.0.0] - 2026-05-29
+## [3.1.0] - 2025-07-07
+
+This release focuses on security hardening and reliability fixes identified in a
+full forensic code audit. It is recommended for all users, especially those who
+expose the web dashboard or scan untrusted networks.
+
+### Security
+- **Web dashboard authentication (C-001):** Added `--dashboard-token` bearer token
+  requirement. All dashboard routes and the statistics/API endpoints now return 401
+  without a valid token. A warning is printed when the dashboard is bound to
+  `0.0.0.0` without a token.
+- **CSRF protection (C-001):** State-changing requests now require a matching
+  `X-CSRF-Token` header (double-submit cookie, `SameSite=Strict`).
+- **TLS verification on by default (C-003):** `verify_ssl` now defaults to `True`.
+  Passing `--no-ssl-verify` prints an explicit warning that credentials may be
+  exposed to interception. TLS warnings are no longer suppressed globally.
+- **XSS-safe reports (C-007):** Added `sanitize_href`/`sanitize_text` helpers. HTML
+  and web reports no longer embed `javascript:`, `data:`, or `vbscript:` URIs from
+  scan responses.
+- **Per-request rate limiting (C-005):** Removed the shared global "rate limited"
+  flag that previously aborted entire batch scans. Rate limiting is now handled per
+  request with backoff and retry, so one throttled host cannot skip unrelated
+  targets.
+
+### Fixed
+- **Atomic database writes (C-002):** The JSON database is now written to a temp
+  file, fsync'd, then atomically renamed. The previous good copy is kept as a
+  `.bak`. Corrupted databases are moved aside (`.corrupt-<timestamp>`) instead of
+  being silently discarded.
+- **Thread-safe request layer:** Rate-limit state is no longer shared mutable
+  instance state across threads.
+- **Error handling:** Removed several bare `except:` blocks in the request and
+  rate-limit paths in favor of specific exception handling.
+
+### Changed
+- Bumped default database schema version to `3.1`.
+- Removed marketing/emoji fluff from the banner and console output.
+- `requirements.txt` notes Flask as an optional dependency for `--serve`.
+
+## [3.0.0] - 2025-05-29
 
 ### Added
 - **New CVEs (5 additional):**
@@ -78,9 +117,9 @@ All notable changes to the Grafana Final Scanner project will be documented in t
 - Connection retry with backoff
 - Safe request wrapper prevents crashes on network failures
 - Non-root user in Docker container
-- SSL verification configurable (default: disabled for flexibility)
+- SSL verification configurable (default: enabled)
 
-## [2.0.0] - 2026-05-15
+## [2.0.0] - 2025-05-15
 
 ### Added
 - **New CVE Checks (3 additional):**
@@ -134,7 +173,7 @@ All notable changes to the Grafana Final Scanner project will be documented in t
 - Rate limiting detection to prevent scanner from being blocked
 - Connection retry with exponential backoff
 
-## [1.0.0] - 2026-01-15
+## [1.0.0] - 2025-01-15
 
 ### Added
 - Initial release with 10 CVE vulnerability checks

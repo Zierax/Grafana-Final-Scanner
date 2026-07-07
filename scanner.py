@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Grafana Final Scanner v3.0
+Grafana Final Scanner v3.1
 ===========================
 Professional-grade security assessment tool for Grafana deployments.
 
@@ -22,6 +22,8 @@ import csv
 import html
 import json
 import os
+import re
+import shutil
 import re
 import signal
 import sys
@@ -53,8 +55,9 @@ def _positive_int(value: str) -> int:
     return ivalue
 
 
-# Disable SSL warnings for testing environments
-requests.packages.urllib3.disable_warnings()
+# TLS warnings are left enabled by default. They are suppressed only
+# when the operator explicitly passes --no-ssl-verify (see __init__),
+# so accidental exposure of credentials over unverified TLS is visible.
 
 # Terminal color codes for professional output
 class Colors:
@@ -83,6 +86,75 @@ class Colors:
     PURPLE = '\033[1;35m'      # Purple
 
 
+# URL schemes that are safe to embed as link targets.
+_SAFE_URL_SCHEMES = ('http', 'https', 'mailto', 'ftp')
+
+
+def sanitize_href(value: str) -> str:
+    """
+    Return a URL safe to place inside an HTML href attribute.
+
+    The input is first HTML-escaped so quote characters cannot break
+    out of the attribute. Any scheme other than http/https/mailto/ftp
+    (notably javascript:, data:, vbscript:) is replaced with '#' to
+    prevent stored XSS via crafted scan responses.
+    """
+    if not value:
+        return '#'
+    escaped = html.escape(value, quote=True)
+    # Only inspect scheme on the original (unescaped) value to avoid
+    # bypasses such as ja&#118;ascript:.
+    lowered = value.strip().lower()
+    if ':' in lowered.split('/')[0]:
+        scheme = lowered.split(':')[0]
+        if scheme not in _SAFE_URL_SCHEMES:
+            return '#'
+    return escaped
+
+
+def sanitize_text(value: str) -> str:
+    """HTML-escape a value for safe insertion as element text/content."""
+    if value is None:
+        return ''
+    return html.escape(str(value), quote=True)
+
+
+NETWORK_AND_PARSE_ERRORS = (
+    requests.exceptions.RequestException,
+    ValueError,
+    KeyError,
+    TypeError,
+    OSError,
+    json.JSONDecodeError,
+)
+
+# Operational constants (replaces previously-inlined magic numbers).
+DB_SCHEMA_VERSION = "3.1"
+DEFAULT_HTTP_TIMEOUT = 10
+DEFAULT_MAX_THREADS = 5
+MAX_SCAN_HISTORY = 1000
+RATE_LIMIT_BACKOFF = 5
+REQUEST_RETRIES = 3
+
+# Auth material that must never be written to logs.
+_REDACT_RE = re.compile(
+    r'(?i)(?:authorization|token|bearer|api[_-]?key|password|cookie)\b'
+    r'(?:[:=\s]+)(["\']?)([^"\s]+)\1'
+)
+
+
+def redact_secrets(text: str) -> str:
+    """Mask credential material in arbitrary log text.
+
+    Replaces the value of any header/field matching auth keywords
+    (Authorization, token, Bearer, api_key, password, cookie) with
+    '***' so verbose/debug logging cannot leak secrets.
+    """
+    if not text:
+        return text
+    return _REDACT_RE.sub(lambda m: f'{m.group(1)} ***', text)
+
+
 # =====================================================================
 #  VULNERABILITY DATABASE MANAGER
 # =====================================================================
@@ -100,30 +172,80 @@ class VulnerabilityDB:
         self.lock = threading.RLock()
         self._data = self._load()
     
+    def _atomic_write(self, data: Dict) -> None:
+        """Write the database to disk atomically with backup rotation.
+
+        A temporary file in the same directory is fully written and
+        fsync'd before being renamed over the target path (os.replace),
+        so a crash, OOM kill, or power loss mid-write cannot leave a
+        truncated database. The previous good copy is preserved as a
+        .bak file before the swap.
+        """
+        directory = os.path.dirname(os.path.abspath(self.db_path)) or '.'
+        tmp_path = os.path.join(directory, f".{os.path.basename(self.db_path)}.tmp")
+        bak_path = self.db_path + ".bak"
+        if os.path.exists(self.db_path):
+            try:
+                shutil.copy2(self.db_path, bak_path)
+            except OSError:
+                pass
+        with open(tmp_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, default=str)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, self.db_path)
+
     def _load(self) -> Dict:
-        """Load database from disk"""
-        try:
-            if os.path.exists(self.db_path):
-                with open(self.db_path, 'r') as f:
-                    return json.load(f)
-        except (json.JSONDecodeError, IOError) as e:
-            print(f"{Colors.WARN}[!] Failed to load database: {e}{Colors.RESET}")
-        return {
-            "version": "3.0",
+        """Load database from disk.
+
+        On corruption the damaged file is preserved (renamed with a
+        .corrupt suffix) instead of being silently discarded, and a
+        fresh database is returned so the tool can keep running.
+        """
+        empty = {
+            "version": DB_SCHEMA_VERSION,
             "created": datetime.now().isoformat(),
             "updated": datetime.now().isoformat(),
             "targets": {},
             "vulnerabilities": [],
             "scan_history": []
         }
-    
+        if not os.path.exists(self.db_path):
+            return empty
+        try:
+            with open(self.db_path, 'r', encoding='utf-8') as f:
+                raw = f.read()
+            if not raw.strip():
+                # An empty file is a valid fresh database, not corruption.
+                return empty
+            data = json.loads(raw)
+            if not isinstance(data, dict):
+                raise json.JSONDecodeError("top-level value is not an object", "", 0)
+            for key in ("targets", "vulnerabilities", "scan_history"):
+                data.setdefault(key, {} if key == "targets" else [])
+            data.setdefault("version", DB_SCHEMA_VERSION)
+            loaded_version = data.get("version")
+            if loaded_version and loaded_version != DB_SCHEMA_VERSION:
+                print(f"{Colors.WARN}[!] Database created by v{loaded_version}; current schema "
+                      f"is v{DB_SCHEMA_VERSION}. If checks behave unexpectedly, re-init the "
+                      f"database.{Colors.RESET}")
+            return data
+        except (json.JSONDecodeError, IOError, ValueError) as e:
+            stamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            corrupt = f"{self.db_path}.corrupt-{stamp}"
+            try:
+                shutil.move(self.db_path, corrupt)
+                print(f"{Colors.WARN}[!] Database corrupted ({e}); moved to {corrupt}{Colors.RESET}")
+            except OSError:
+                print(f"{Colors.WARN}[!] Database corrupted ({e}); could not preserve file{Colors.RESET}")
+            return empty
+
     def _save(self):
-        """Save database to disk"""
+        """Save database to disk atomically"""
         with self.lock:
             self._data["updated"] = datetime.now().isoformat()
             try:
-                with open(self.db_path, 'w') as f:
-                    json.dump(self._data, f, indent=2, default=str)
+                self._atomic_write(self._data)
             except IOError as e:
                 print(f"{Colors.WARN}[!] Failed to save database: {e}{Colors.RESET}")
     
@@ -231,7 +353,7 @@ class VulnerabilityDB:
         with self.lock:
             self._data["scan_history"].append(record)
             # Keep only last 1000 records
-            if len(self._data["scan_history"]) > 1000:
+            if len(self._data["scan_history"]) > MAX_SCAN_HISTORY:
                 self._data["scan_history"] = self._data["scan_history"][-1000:]
             self._save()
     
@@ -401,9 +523,9 @@ class GrafanaFinalScanner:
         '/api/frontend/settings': ['buildInfo', 'auth'],
     }
     
-    def __init__(self, timeout: int = 10, verify_ssl: bool = False, verbose: bool = False,
+    def __init__(self, timeout: int = DEFAULT_HTTP_TIMEOUT, verify_ssl: bool = True, verbose: bool = False,
                  auth_token: Optional[str] = None, auth_user: Optional[str] = None,
-                 auth_pass: Optional[str] = None, max_threads: int = 5,
+                 auth_pass: Optional[str] = None, max_threads: int = DEFAULT_MAX_THREADS,
                  db_path: Optional[str] = None):
         """
         Initialize the scanner with configuration parameters
@@ -420,6 +542,11 @@ class GrafanaFinalScanner:
         """
         self.timeout = timeout
         self.verify_ssl = verify_ssl
+        if not self.verify_ssl:
+            # Only suppress TLS warnings when the user explicitly opted out.
+            requests.packages.urllib3.disable_warnings()
+            print(f"{Colors.WARN}[!] SSL certificate verification is DISABLED. Credentials and "
+                  f"scan results may be exposed to interception (MITM).{Colors.RESET}")
         self.verbose = verbose
         self.max_threads = max_threads
         self.session = requests.Session()
@@ -433,6 +560,7 @@ class GrafanaFinalScanner:
         
         # Configure authentication
         self._print_lock = threading.Lock()
+        self._scan_lock = threading.Lock()
         self._configure_auth(auth_token, auth_user, auth_pass)
         
         # Version detection cache
@@ -447,10 +575,7 @@ class GrafanaFinalScanner:
             'checks_passed': 0,
             'errors': 0
         }
-        
-        # Rate limiting awareness
-        self._rate_limited = False
-        
+
         # Vulnerability database
         self.vulndb = VulnerabilityDB(db_path) if db_path else None
     
@@ -481,89 +606,121 @@ class GrafanaFinalScanner:
         indent_str = "  " * indent
         
         level_config = {
-            'CRITICAL': (Colors.CRITICAL, '🔴', '[CRITICAL]'),
-            'HIGH': (Colors.HIGH, '🟠', '[HIGH]'),
-            'MEDIUM': (Colors.MEDIUM, '🟡', '[MEDIUM]'),
-            'LOW': (Colors.LOW, '🔵', '[LOW]'),
-            'INFO': (Colors.INFO, 'ℹ', '[INFO]'),
-            'VULN': (Colors.VULN, '⚠️', '[VULN]'),
-            'SAFE': (Colors.SAFE, '✓', '[SAFE]'),
-            'WARN': (Colors.WARN, '⚡', '[WARN]'),
-            'ERROR': (Colors.CRITICAL, '✗', '[ERROR]'),
-            'SUCCESS': (Colors.SUCCESS, '✓', '[OK]'),
+            'CRITICAL': (Colors.CRITICAL, '!', '[CRITICAL]'),
+            'HIGH': (Colors.HIGH, '!', '[HIGH]'),
+            'MEDIUM': (Colors.MEDIUM, '*', '[MEDIUM]'),
+            'LOW': (Colors.LOW, '*', '[LOW]'),
+            'INFO': (Colors.INFO, 'i', '[INFO]'),
+            'VULN': (Colors.VULN, '!', '[VULN]'),
+            'SAFE': (Colors.SAFE, '+', '[SAFE]'),
+            'WARN': (Colors.WARN, '!', '[WARN]'),
+            'ERROR': (Colors.CRITICAL, 'x', '[ERROR]'),
+            'SUCCESS': (Colors.SUCCESS, '+', '[OK]'),
         }
         
         color, symbol, prefix = level_config.get(level, (Colors.RESET, '•', f'[{level}]'))
-        
+
+        # Never let credential material reach stdout/logs.
+        safe_message = redact_secrets(message)
+
         if self.verbose:
-            output = f"{Colors.DIM}[{timestamp}]{Colors.RESET} {indent_str}{symbol} {color}{prefix}{Colors.RESET} {message}"
+            output = f"{Colors.DIM}[{timestamp}]{Colors.RESET} {indent_str}{symbol} {color}{prefix}{Colors.RESET} {safe_message}"
         else:
-            output = f"{indent_str}{symbol} {color}{prefix}{Colors.RESET} {message}"
-        
+            output = f"{indent_str}{symbol} {color}{prefix}{Colors.RESET} {safe_message}"
+
         with self._print_lock:
             print(output)
     
-    def _check_rate_limit(self, response) -> bool:
-        """Check if we're being rate limited"""
+    @staticmethod
+    def _host_of(url: str) -> str:
+        """Extract the network host (netloc) from a URL for rate-limit scoping."""
+        try:
+            return urlparse(url).netloc or url
+        except NETWORK_AND_PARSE_ERRORS as e:
+            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
+            return url
+
+    def _parse_retry_after(self, response) -> int:
+        """Parse the Retry-After header into an integer number of seconds."""
+        raw = response.headers.get('Retry-After')
+        if not raw:
+            return 0
+        try:
+            return max(1, int(raw))
+        except (TypeError, ValueError):
+            return 0
+
+    def _is_rate_limited_response(self, response) -> bool:
+        """Return True if the response indicates the host is rate limiting us.
+
+        This is a pure function of the response and never mutates shared
+        state, so it is safe to call concurrently from multiple threads.
+        """
         if response.status_code == 429:
-            self._rate_limited = True
             return True
         if response.headers.get('X-RateLimit-Remaining') == '0':
-            self._rate_limited = True
             return True
         if response.headers.get('Retry-After'):
-            self._rate_limited = True
             return True
         try:
             data = response.json()
-            if isinstance(data, dict):
-                msg = str(data.get('message', '') + data.get('error', '')).lower()
-                if 'rate limit' in msg or 'too many requests' in msg:
-                    self._rate_limited = True
-                    return True
-        except:
-            pass
+        except (ValueError, requests.exceptions.JSONDecodeError):
+            return False
+        if isinstance(data, dict):
+            msg = str(data.get('message', '') + data.get('error', '')).lower()
+            if 'rate limit' in msg or 'too many requests' in msg:
+                return True
         return False
-    
+
     def _safe_request(self, method: str, url: str, **kwargs) -> Optional[requests.Response]:
         """
-        Safe HTTP request with retry and rate-limit handling
+        Safe HTTP request with retry, backoff, and per-host rate-limit handling.
+
+        Rate limiting is handled per request: when a 429 (or equivalent)
+        response is received the request backs off and retries. There is no
+        global "blocked" flag, so a rate-limited host cannot silently skip
+        scans of unrelated targets (previous behaviour caused entire batch
+        scans to be aborted with no indication).
         """
-        if self._rate_limited:
-            self.log("Rate limited - skipping remaining requests", "WARN", 2)
-            return None
-        
-        retries = 2
+        retries = REQUEST_RETRIES
+        backoff = RATE_LIMIT_BACKOFF
+        host = self._host_of(url)
         for attempt in range(retries):
             try:
                 kwargs.setdefault('timeout', self.timeout)
                 kwargs.setdefault('verify', self.verify_ssl)
                 kwargs.setdefault('allow_redirects', True)
-                
+
                 response = self.session.request(method, url, **kwargs)
-                
-                if self._check_rate_limit(response):
-                    self.log("Rate limit detected - waiting before retry...", "WARN", 2)
-                    time.sleep(5)
+
+                if self._is_rate_limited_response(response):
+                    wait = self._parse_retry_after(response) or (backoff * (attempt + 1))
+                    self.log(f"Rate limited by {host} - backing off {wait}s "
+                             f"(attempt {attempt + 1}/{retries})", "WARN", 2)
+                    time.sleep(wait)
                     continue
-                
+
                 return response
-                
+
             except requests.exceptions.Timeout:
                 if attempt < retries - 1:
-                    time.sleep(2)
+                    time.sleep(2 * (attempt + 1))
                     continue
                 if self.verbose:
                     self.log(f"Request timeout: {url}", "INFO", 3)
             except requests.exceptions.ConnectionError as e:
+                if attempt < retries - 1:
+                    time.sleep(2 * (attempt + 1))
+                    continue
                 if self.verbose:
                     self.log(f"Connection error: {str(e)}", "INFO", 3)
                 return None
-            except Exception as e:
+            except requests.exceptions.RequestException as e:
                 if self.verbose:
                     self.log(f"Request error: {str(e)}", "INFO", 3)
                 return None
-        
+
+        self.log(f"Giving up on {url} after {retries} attempts", "ERROR", 2)
         return None
     
     # =================================================================
@@ -605,9 +762,11 @@ class GrafanaFinalScanner:
                         elif 'database' in data:
                             confidence += 0.3
                             indicators_found.append('api_health_partial')
-                except:
+                except NETWORK_AND_PARSE_ERRORS as e:
+                    if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                     pass
-        except:
+        except NETWORK_AND_PARSE_ERRORS as e:
+            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             pass
         
         # Method 2: Check login page for Grafana HTML indicators
@@ -624,7 +783,8 @@ class GrafanaFinalScanner:
                             # Try to extract version from the page
                             version = self._parse_login_page(resp)
                         break  # Count HTML indicators as one hit
-        except:
+        except NETWORK_AND_PARSE_ERRORS as e:
+            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             pass
         
         # Method 3: Check frontend settings API
@@ -641,9 +801,11 @@ class GrafanaFinalScanner:
                                 if not version:
                                     version = data['buildInfo'].get('version', version)
                                 indicators_found.append('frontend_settings')
-                    except:
+                    except NETWORK_AND_PARSE_ERRORS as e:
+                        if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                         pass
-            except:
+            except NETWORK_AND_PARSE_ERRORS as e:
+                if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                 pass
         
         # Method 4: Check multiple Grafana endpoints
@@ -660,11 +822,13 @@ class GrafanaFinalScanner:
                                 confidence += 0.2
                                 indicators_found.append(f'api_{endpoint[5:15]}')
                                 break
-                        except:
+                        except NETWORK_AND_PARSE_ERRORS as e:
+                            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                             confidence += 0.1
                             indicators_found.append(f'api_resp_{endpoint[5:15]}')
                             break
-                except:
+                except NETWORK_AND_PARSE_ERRORS as e:
+                    if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                     continue
         
         # Method 5: Response headers check
@@ -676,7 +840,8 @@ class GrafanaFinalScanner:
                     if 'grafana' in headers_str:
                         confidence += 0.2
                         indicators_found.append('grafana_header')
-            except:
+            except NETWORK_AND_PARSE_ERRORS as e:
+                if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                 pass
         
         is_grafana = confidence >= 0.3  # Minimum threshold
@@ -709,15 +874,15 @@ class GrafanaFinalScanner:
         except FileNotFoundError:
             self.log(f"File not found: {filename}", "ERROR")
             sys.exit(1)
-        except Exception as e:
+        except NETWORK_AND_PARSE_ERRORS as e:
             self.log(f"Error reading file: {str(e)}", "ERROR")
             sys.exit(1)
         
         self.log(f"Auto-search: loaded {len(all_urls)} URLs from {filename}", "INFO")
         print()
-        self.log(f"{'─'*60}", "INFO")
+        self.log(f"{'-'*60}", "INFO")
         self.log("Phase 1: Grafana Instance Detection", "INFO")
-        self.log(f"{'─'*60}", "INFO")
+        self.log(f"{'-'*60}", "INFO")
         print()
         
         # Detect Grafana instances in parallel
@@ -729,7 +894,8 @@ class GrafanaFinalScanner:
                 is_g, conf, ver = self.is_grafana_instance(url)
                 if is_g:
                     return (url, conf, ver)
-            except:
+            except NETWORK_AND_PARSE_ERRORS as e:
+                if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                 pass
             return None
         
@@ -742,19 +908,19 @@ class GrafanaFinalScanner:
                 result = future.result()
                 if result:
                     grafana_urls.append(result)
-                    self.log(f"[{completed}/{len(all_urls)}] ✓ Grafana detected: {url}", "SUCCESS", 1)
+                    self.log(f"[{completed}/{len(all_urls)}] [OK] Grafana detected: {url}", "SUCCESS", 1)
                 else:
                     if self.verbose:
-                        self.log(f"[{completed}/{len(all_urls)}] ✗ Not Grafana: {url}", "DIM", 1)
+                        self.log(f"[{completed}/{len(all_urls)}] [X] Not Grafana: {url}", "DIM", 1)
                     else:
                         # Progress indicator without verbose
                         if completed % 10 == 0 or completed == len(all_urls):
                             self.log(f"Progress: {completed}/{len(all_urls)} URLs checked...", "INFO")
         
         print()
-        self.log(f"{'─'*60}", "INFO")
+        self.log(f"{'-'*60}", "INFO")
         self.log(f"Detection complete: {len(grafana_urls)}/{len(all_urls)} Grafana instances found", "INFO")
-        self.log(f"{'─'*60}", "INFO")
+        self.log(f"{'-'*60}", "INFO")
         print()
         
         if not grafana_urls:
@@ -768,7 +934,7 @@ class GrafanaFinalScanner:
             result = self.scan_target(url)
             results.append(result)
             
-            if i < len(grafana_urls) and not self._rate_limited:
+            if i < len(grafana_urls):
                 time.sleep(0.5)
         
         return results
@@ -848,7 +1014,7 @@ class GrafanaFinalScanner:
                         self.log(f"Version detected: {Colors.BOLD}Grafana v{version}{Colors.RESET}", "SUCCESS", 1)
                         return version
                         
-            except Exception as e:
+            except NETWORK_AND_PARSE_ERRORS as e:
                 if self.verbose:
                     self.log(f"Method {method_config['endpoint']} failed: {str(e)}", "INFO", 2)
                 continue
@@ -863,7 +1029,8 @@ class GrafanaFinalScanner:
             if 'buildInfo' in data and 'version' in data['buildInfo']:
                 self.build_info = data['buildInfo']
                 return data['buildInfo']['version']
-        except:
+        except NETWORK_AND_PARSE_ERRORS as e:
+            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             pass
         return None
     
@@ -873,7 +1040,8 @@ class GrafanaFinalScanner:
             data = response.json()
             if 'version' in data:
                 return data['version']
-        except:
+        except NETWORK_AND_PARSE_ERRORS as e:
+            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             pass
         return None
     
@@ -895,7 +1063,8 @@ class GrafanaFinalScanner:
                 match = re.search(pattern, response.text, re.IGNORECASE)
                 if match:
                     return match.group(1)
-        except:
+        except NETWORK_AND_PARSE_ERRORS as e:
+            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             pass
         return None
     
@@ -912,7 +1081,8 @@ class GrafanaFinalScanner:
                     if key in data and isinstance(data[key], str):
                         if re.match(r'^[0-9]+\.[0-9]+', data[key]):
                             return data[key]
-        except:
+        except NETWORK_AND_PARSE_ERRORS as e:
+            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             pass
         return None
     
@@ -924,7 +1094,8 @@ class GrafanaFinalScanner:
                     version = response.headers[header]
                     if re.match(r'^[0-9]+\.[0-9]+', version):
                         return version
-        except:
+        except NETWORK_AND_PARSE_ERRORS as e:
+            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             pass
         return None
     
@@ -1042,7 +1213,7 @@ class GrafanaFinalScanner:
             if check_func:
                 return check_func()
                 
-        except Exception as e:
+        except NETWORK_AND_PARSE_ERRORS as e:
             if self.verbose:
                 self.log(f"Version check error for {cve_id}: {str(e)}", "WARN", 2)
         
@@ -1121,7 +1292,8 @@ class GrafanaFinalScanner:
                         if response.status_code == 200 and len(content) < 50:
                             continue
                             
-                except Exception:
+                except NETWORK_AND_PARSE_ERRORS as e:
+                    if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                     continue
         
         self.stats['checks_passed'] += 1
@@ -1220,7 +1392,8 @@ class GrafanaFinalScanner:
                         if isinstance(data, dict) and ('buildInfo' in data or 'oauth' in data):
                             if 'oauth' in data and data['oauth']:
                                 vulnerabilities.append("OAuth configuration exposed via frontend settings")
-                    except:
+                    except NETWORK_AND_PARSE_ERRORS as e:
+                        if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                         pass
                 
                 elif vector['type'] == 'snapshot_access':
@@ -1234,10 +1407,12 @@ class GrafanaFinalScanner:
                                 )
                                 if has_deleted_snapshots:
                                     vulnerabilities.append(f"Snapshot list accessible with delete keys ({len(data)} snapshots)")
-                        except:
+                        except NETWORK_AND_PARSE_ERRORS as e:
+                            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                             pass
                             
-            except Exception:
+            except NETWORK_AND_PARSE_ERRORS as e:
+                if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                 continue
         
         if vulnerabilities:
@@ -1292,12 +1467,14 @@ class GrafanaFinalScanner:
                         if isinstance(data, dict) and 'results' in data:
                             self.stats['vulnerabilities_found'] += 1
                             return True, "SQL Expressions endpoint accessible and responding", test_url
-                    except:
+                    except NETWORK_AND_PARSE_ERRORS as e:
+                        if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                         pass
                     self.stats['checks_passed'] += 1
                     return False, "SQL Expressions available (exploitability requires DuckDB binary installation)", test_url
                     
-            except Exception:
+            except NETWORK_AND_PARSE_ERRORS as e:
+                if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                 continue
         
         self.stats['checks_passed'] += 1
@@ -1352,10 +1529,12 @@ class GrafanaFinalScanner:
                                         if 'OAuth' not in detected_auth:
                                             detected_auth.append('OAuth')
                                         break
-                    except:
+                    except NETWORK_AND_PARSE_ERRORS as e:
+                        if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                         pass
                         
-            except Exception:
+            except NETWORK_AND_PARSE_ERRORS as e:
+                if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                 continue
         
         if detected_auth:
@@ -1403,7 +1582,8 @@ class GrafanaFinalScanner:
                                     accessible_snapshots += 1
                                     accessible_ids.append(snapshot_id)
                                     break
-                        except:
+                        except NETWORK_AND_PARSE_ERRORS as e:
+                            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                             content_lower = response.text.lower()
                             snapshot_indicators = ['snapshot', 'dashboard', 'created', 'expire']
                             indicator_count = sum(1 for ind in snapshot_indicators if ind in content_lower)
@@ -1412,7 +1592,8 @@ class GrafanaFinalScanner:
                                 accessible_ids.append(snapshot_id)
                                 break
                                 
-                except Exception:
+                except NETWORK_AND_PARSE_ERRORS as e:
+                    if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                     continue
             
             if snapshot_id % 10 == 0:
@@ -1467,7 +1648,8 @@ class GrafanaFinalScanner:
                                 f"using encoding: {pattern[:30]}... ({matches}/{len(indicators)} indicators)"
                             ), test_url
                             
-                except Exception:
+                except NETWORK_AND_PARSE_ERRORS as e:
+                    if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                     continue
         
         self.stats['checks_passed'] += 1
@@ -1508,7 +1690,8 @@ class GrafanaFinalScanner:
                     if self.verbose:
                         self.log(f"{endpoint} returned 404 (inconclusive - may not be Grafana's DS proxy)", "INFO", 2)
                     
-            except Exception:
+            except NETWORK_AND_PARSE_ERRORS as e:
+                if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                 continue
         
         self.stats['checks_passed'] += 1
@@ -1550,11 +1733,13 @@ class GrafanaFinalScanner:
                         data = response.json()
                         if isinstance(data, (list, dict)) and len(str(data)) > 10:
                             accessible.append(endpoint)
-                    except:
+                    except NETWORK_AND_PARSE_ERRORS as e:
+                        if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                         if len(response.text) > 50:
                             accessible.append(endpoint)
                             
-            except Exception:
+            except NETWORK_AND_PARSE_ERRORS as e:
+                if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                 continue
         
         if accessible:
@@ -1630,10 +1815,12 @@ class GrafanaFinalScanner:
                             if findings:
                                 exposed_info.extend(findings)
                                 
-                    except:
+                    except NETWORK_AND_PARSE_ERRORS as e:
+                        if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                         pass
                         
-            except Exception:
+            except NETWORK_AND_PARSE_ERRORS as e:
+                if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                 continue
         
         if exposed_info:
@@ -1671,7 +1858,8 @@ class GrafanaFinalScanner:
                         f"Potential auth bypass vector."
                     ), test_url
                     
-            except Exception:
+            except NETWORK_AND_PARSE_ERRORS as e:
+                if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                 continue
         
         self.stats['checks_passed'] += 1
@@ -1696,7 +1884,8 @@ class GrafanaFinalScanner:
                         else:
                             results.append((False, "Snapshots API returned empty response", test_url, "CVE-2020-11110"))
                             self.stats['checks_passed'] += 1
-                    except:
+                    except NETWORK_AND_PARSE_ERRORS as e:
+                        if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                         results.append((False, "Snapshots API returned non-JSON response", test_url, "CVE-2020-11110"))
                         self.stats['checks_passed'] += 1
                 elif r and r.status_code in [401, 403]:
@@ -1705,7 +1894,8 @@ class GrafanaFinalScanner:
                 else:
                     results.append((False, "Snapshots API not accessible", test_url, "CVE-2020-11110"))
                     self.stats['checks_passed'] += 1
-            except:
+            except NETWORK_AND_PARSE_ERRORS as e:
+                if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                 results.append((False, "Connection error", test_url, "CVE-2020-11110"))
                 self.stats['errors'] += 1
         else:
@@ -1728,7 +1918,8 @@ class GrafanaFinalScanner:
                 else:
                     results.append((False, f"AngularJS test returned HTTP {r.status_code if r else 'N/A'}", test_url, "CVE-2021-41174"))
                     self.stats['checks_passed'] += 1
-            except:
+            except NETWORK_AND_PARSE_ERRORS as e:
+                if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                 results.append((False, "Connection error", test_url, "CVE-2021-41174"))
                 self.stats['errors'] += 1
         else:
@@ -1747,7 +1938,8 @@ class GrafanaFinalScanner:
                 else:
                     results.append((False, f"Snapshots POST restricted (HTTP {r.status_code if r else 'N/A'})", test_url, "CVE-2021-27358"))
                     self.stats['checks_passed'] += 1
-            except:
+            except NETWORK_AND_PARSE_ERRORS as e:
+                if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                 results.append((False, "Connection error", test_url, "CVE-2021-27358"))
                 self.stats['errors'] += 1
         else:
@@ -1836,7 +2028,8 @@ class GrafanaFinalScanner:
             
             return results
             
-        except Exception:
+        except NETWORK_AND_PARSE_ERRORS as e:
+            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             return {}
     
     def check_cors_misconfiguration(self, base_url: str) -> Dict:
@@ -1886,7 +2079,8 @@ class GrafanaFinalScanner:
             
             return result
             
-        except Exception:
+        except NETWORK_AND_PARSE_ERRORS as e:
+            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             return {}
     
     def check_security_config(self, base_url: str) -> Dict:
@@ -1924,11 +2118,13 @@ class GrafanaFinalScanner:
                         }
                     else:
                         config_results['anonymous_access'] = {'enabled': None, 'severity': 'INFO', 'message': 'Could not parse settings (unexpected format)', 'url': url}
-                except:
+                except NETWORK_AND_PARSE_ERRORS as e:
+                    if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                     config_results['anonymous_access'] = {'enabled': None, 'severity': 'INFO', 'message': 'Could not parse settings (non-JSON response)', 'url': url}
             elif r:
                 config_results['anonymous_access'] = {'enabled': False, 'severity': 'INFO', 'message': f'Settings endpoint requires authentication (HTTP {r.status_code})', 'url': url}
-        except:
+        except NETWORK_AND_PARSE_ERRORS as e:
+            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             pass
         
         # Metrics Exposure
@@ -1946,7 +2142,8 @@ class GrafanaFinalScanner:
                             'url': url
                         }
                         break
-            except:
+            except NETWORK_AND_PARSE_ERRORS as e:
+                if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                 continue
         
         if 'metrics' not in config_results:
@@ -1974,9 +2171,11 @@ class GrafanaFinalScanner:
                             'message': f"{len(plugins)} plugins installed ({len(unsigned)} unsigned)" if unsigned else f"{len(plugins)} plugins installed, all signed",
                             'url': url
                         }
-                except:
+                except NETWORK_AND_PARSE_ERRORS as e:
+                    if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                     pass
-        except:
+        except NETWORK_AND_PARSE_ERRORS as e:
+            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             pass
         
         # Signup Availability
@@ -1993,9 +2192,11 @@ class GrafanaFinalScanner:
                             'message': 'User self-signup is ENABLED - unauthorized users can register',
                             'url': url
                         }
-                except:
+                except NETWORK_AND_PARSE_ERRORS as e:
+                    if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                     pass
-        except:
+        except NETWORK_AND_PARSE_ERRORS as e:
+            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             pass
         
         # Security Headers
@@ -2031,9 +2232,11 @@ class GrafanaFinalScanner:
                                 'disclosed_keys': disclosed,
                                 'message': f"Build information disclosed via health endpoint: {', '.join(disclosed)}"
                             }
-                except:
+                except NETWORK_AND_PARSE_ERRORS as e:
+                    if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
                     pass
-        except:
+        except NETWORK_AND_PARSE_ERRORS as e:
+            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             pass
         
         return config_results
@@ -2042,10 +2245,10 @@ class GrafanaFinalScanner:
     #  MAIN SCAN EXECUTION
     # =================================================================
     
-    def scan_target(self, url: str) -> Dict:
+    def _scan_target_inner(self, url: str) -> Dict:
         """
         Perform comprehensive security assessment of target
-        
+
         Execution flow:
         1. Connectivity verification
         2. Version fingerprinting
@@ -2053,27 +2256,47 @@ class GrafanaFinalScanner:
         4. Configuration security analysis
         5. Results compilation and reporting
         6. Database persistence (if enabled)
-        
+
         Returns:
             Dictionary containing scan results, vulnerabilities, and metadata
+
+        Note:
+            Mutates shared instance state (version, statistics, detected
+            plugins). Callers must go through the thread-safe ``scan_target``
+            wrapper, which serializes concurrent calls with a lock.
         """
         start_time = time.time()
         
         # Reset statistics for this target
         self.stats = {'total_checks': 0, 'vulnerabilities_found': 0, 'checks_passed': 0, 'errors': 0}
-        self._rate_limited = False
-        
+
         # Header
         with self._print_lock:
-            print(f"\n{Colors.HEADER}{'═'*80}{Colors.RESET}")
-            print(f"{Colors.HEADER}║{Colors.RESET} {Colors.BOLD}TARGET ASSESSMENT{Colors.RESET}")
-            print(f"{Colors.HEADER}║{Colors.RESET} {Colors.UNDERLINE}{url}{Colors.RESET}")
-            print(f"{Colors.HEADER}{'═'*80}{Colors.RESET}\n")
+            print(f"\n{Colors.HEADER}{'='*80}{Colors.RESET}")
+            print(f"{Colors.HEADER}|{Colors.RESET} {Colors.BOLD}TARGET ASSESSMENT{Colors.RESET}")
+            print(f"{Colors.HEADER}|{Colors.RESET} {Colors.UNDERLINE}{url}{Colors.RESET}")
+            print(f"{Colors.HEADER}{'='*80}{Colors.RESET}\n")
         
         # Normalize URL
         if not url.startswith(('http://', 'https://')):
             url = 'https://' + url
-        
+
+        parsed = urlparse(url)
+        if not parsed.netloc:
+            self.log(f"Invalid target URL (no host): {redact_secrets(url)}", "ERROR")
+            return {
+                'url': url,
+                'timestamp': datetime.now().isoformat(),
+                'version': None,
+                'build_info': {},
+                'vulnerabilities': [],
+                'configuration': {},
+                'statistics': {'total_checks': 0, 'vulnerabilities_found': 0,
+                               'checks_passed': 0, 'errors': 1},
+                'accessible': False,
+                'duration': 0,
+            }
+
         results = {
             'url': url,
             'timestamp': datetime.now().isoformat(),
@@ -2109,7 +2332,7 @@ class GrafanaFinalScanner:
             self.log(f"Connection refused: {str(e)}", "ERROR", 1)
             results['duration'] = time.time() - start_time
             return results
-        except Exception as e:
+        except NETWORK_AND_PARSE_ERRORS as e:
             self.log(f"Unexpected error: {str(e)}", "ERROR", 1)
             results['duration'] = time.time() - start_time
             return results
@@ -2167,7 +2390,7 @@ class GrafanaFinalScanner:
             if severity in ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']:
                 self.log(check_data.get('message', str(check_data)), severity, 1)
                 if 'url' in check_data:
-                    self.log(f"└─ Endpoint: {Colors.DIM}{check_data['url']}{Colors.RESET}", severity, 2)
+                    self.log(f"|- Endpoint: {Colors.DIM}{check_data['url']}{Colors.RESET}", severity, 2)
         
         # Save results to database
         if self.vulndb:
@@ -2194,7 +2417,22 @@ class GrafanaFinalScanner:
         self.log(f"Duration: {results['duration']:.1f}s", "INFO", 1)
         
         return results
-    
+
+    def scan_target(self, url: str) -> Dict:
+        """
+        Thread-safe public entry point for scanning a single target.
+
+        Acquires a per-instance lock so concurrent calls cannot clobber the
+        shared scan state (version, statistics, detected plugins) that the
+        check pipeline mutates. The actual work is delegated to
+        ``_scan_target_inner``.
+        """
+        self._scan_lock.acquire()
+        try:
+            return self._scan_target_inner(url)
+        finally:
+            self._scan_lock.release()
+
     def _run_cve_checks_parallel(self, cve_checks: List[Tuple], url: str, results: Dict):
         """Run CVE checks in parallel using thread pool"""
         def run_check(check_info):
@@ -2202,7 +2440,7 @@ class GrafanaFinalScanner:
             try:
                 vulnerable, message, test_url = check_func(url)
                 return cve_id, severity, description, vulnerable, message, test_url
-            except Exception as e:
+            except NETWORK_AND_PARSE_ERRORS as e:
                 return cve_id, severity, description, False, f"Error: {str(e)}", url
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_threads) as executor:
@@ -2223,7 +2461,7 @@ class GrafanaFinalScanner:
                 self._report_vulnerability(cve_id, severity, message, test_url, results, description)
             elif self.verbose:
                 self.log(f"{cve_id:18} {message}", "SAFE", 1)
-        except Exception as e:
+        except NETWORK_AND_PARSE_ERRORS as e:
             if self.verbose:
                 self.log(f"{cve_id:18} Error: {str(e)}", "ERROR", 1)
     
@@ -2235,8 +2473,8 @@ class GrafanaFinalScanner:
         
         description_str = f" {description}" if description else ""
         self.log(f"{cve_id:18}{description_str}", severity, 1)
-        self.log(f"└─ {message}", severity, 2)
-        self.log(f"└─ Test URL: {Colors.DIM}{test_url}{Colors.RESET}", severity, 2)
+        self.log(f"|- {message}", severity, 2)
+        self.log(f"|- Test URL: {Colors.DIM}{test_url}{Colors.RESET}", severity, 2)
         print()
         
         results['vulnerabilities'].append({
@@ -2261,7 +2499,7 @@ class GrafanaFinalScanner:
                 result = self.scan_target(url)
                 results.append(result)
                 
-                if i < len(urls) and not self._rate_limited:
+                if i < len(urls):
                     time.sleep(1)
             
             return results
@@ -2269,7 +2507,7 @@ class GrafanaFinalScanner:
         except FileNotFoundError:
             self.log(f"File not found: {filename}", "ERROR")
             sys.exit(1)
-        except Exception as e:
+        except NETWORK_AND_PARSE_ERRORS as e:
             self.log(f"Error reading file: {str(e)}", "ERROR")
             sys.exit(1)
     
@@ -2279,9 +2517,9 @@ class GrafanaFinalScanner:
     
     def generate_report(self, results: List[Dict], output_file: Optional[str] = None):
         """Generate comprehensive assessment report"""
-        print(f"\n{Colors.HEADER}{'═'*80}{Colors.RESET}")
-        print(f"{Colors.HEADER}║{Colors.RESET} {Colors.BOLD}ASSESSMENT SUMMARY{Colors.RESET}")
-        print(f"{Colors.HEADER}{'═'*80}{Colors.RESET}\n")
+        print(f"\n{Colors.HEADER}{'='*80}{Colors.RESET}")
+        print(f"{Colors.HEADER}|{Colors.RESET} {Colors.BOLD}ASSESSMENT SUMMARY{Colors.RESET}")
+        print(f"{Colors.HEADER}{'='*80}{Colors.RESET}\n")
         
         total_targets = len(results)
         vulnerable_targets = sum(1 for r in results if r['vulnerabilities'])
@@ -2302,15 +2540,15 @@ class GrafanaFinalScanner:
             count = severity_counts.get(severity, 0)
             if count > 0:
                 color = {'CRITICAL': Colors.CRITICAL, 'HIGH': Colors.HIGH, 'MEDIUM': Colors.MEDIUM, 'LOW': Colors.LOW}[severity]
-                symbol = {'CRITICAL': '🔴', 'HIGH': '🟠', 'MEDIUM': '🟡', 'LOW': '🔵'}[severity]
+                symbol = {'CRITICAL': '[CRIT]', 'HIGH': '[HIGH]', 'MEDIUM': '[MED]', 'LOW': '[LOW]'}[severity]
                 print(f"  {symbol} {color}{severity:10} {count:3}{Colors.RESET}")
             else:
-                print(f"  ✓ {Colors.DIM}{severity:10}   0{Colors.RESET}")
+                print(f"  [OK] {Colors.DIM}{severity:10}   0{Colors.RESET}")
         
         if vulnerable_targets > 0:
-            print(f"\n{Colors.HEADER}{'═'*80}{Colors.RESET}")
-            print(f"{Colors.HEADER}║{Colors.RESET} {Colors.BOLD}DETAILED FINDINGS{Colors.RESET}")
-            print(f"{Colors.HEADER}{'═'*80}{Colors.RESET}\n")
+            print(f"\n{Colors.HEADER}{'='*80}{Colors.RESET}")
+            print(f"{Colors.HEADER}|{Colors.RESET} {Colors.BOLD}DETAILED FINDINGS{Colors.RESET}")
+            print(f"{Colors.HEADER}{'='*80}{Colors.RESET}\n")
             
             for result in results:
                 if result['vulnerabilities']:
@@ -2323,13 +2561,13 @@ class GrafanaFinalScanner:
                         if vulns:
                             for vuln in vulns:
                                 color = {'CRITICAL': Colors.CRITICAL, 'HIGH': Colors.HIGH, 'MEDIUM': Colors.MEDIUM, 'LOW': Colors.LOW}[severity]
-                                symbol = {'CRITICAL': '🔴', 'HIGH': '🟠', 'MEDIUM': '🟡', 'LOW': '🔵'}[severity]
+                                symbol = {'CRITICAL': '[CRIT]', 'HIGH': '[HIGH]', 'MEDIUM': '[MED]', 'LOW': '[LOW]'}[severity]
                                 print(f"\n  {symbol} {color}[{severity}] {vuln['cve_id']}{Colors.RESET}")
-                                print(f"     └─ {vuln['message']}")
-                                print(f"     └─ {Colors.DIM}{vuln['test_url']}{Colors.RESET}")
+                                print(f"     |- {vuln['message']}")
+                                print(f"     |- {Colors.DIM}{vuln['test_url']}{Colors.RESET}")
                     print()
         else:
-            print(f"\n{Colors.SUCCESS}✓ All scanned targets appear secure{Colors.RESET}")
+            print(f"\n{Colors.SUCCESS}[OK] All scanned targets appear secure{Colors.RESET}")
         
         if output_file:
             base_filename = output_file
@@ -2348,7 +2586,7 @@ class GrafanaFinalScanner:
             with open(filename, 'w') as f:
                 json.dump(results, f, indent=2, default=str)
             print(f"\n{Colors.SUCCESS}[+] JSON report saved: {filename}{Colors.RESET}")
-        except Exception as e:
+        except NETWORK_AND_PARSE_ERRORS as e:
             print(f"\n{Colors.CRITICAL}[-] Error saving JSON report: {str(e)}{Colors.RESET}")
     
     def _save_html_report(self, results: List[Dict], filename: str):
@@ -2369,12 +2607,12 @@ class GrafanaFinalScanner:
                             'LOW': '#0dcaf0'
                         }.get(vuln['severity'], '#6c757d')
                         
-                        esc_url = html.escape(result['url'])
-                        esc_version = html.escape(result.get('version', 'Unknown') or 'Unknown')
-                        esc_severity = html.escape(vuln['severity'])
-                        esc_cve = html.escape(vuln['cve_id'])
-                        esc_msg = html.escape(vuln['message'][:80])
-                        esc_test_url = html.escape(vuln.get('test_url', '#'))
+                        esc_url = sanitize_href(result['url'])
+                        esc_version = sanitize_text(result.get('version', 'Unknown') or 'Unknown')
+                        esc_severity = sanitize_text(vuln['severity'])
+                        esc_cve = sanitize_text(vuln['cve_id'])
+                        esc_msg = sanitize_text(vuln['message'][:80])
+                        esc_test_url = sanitize_href(vuln.get('test_url', '#'))
                         
                         vuln_rows += f"""
                         <tr>
@@ -2424,7 +2662,7 @@ class GrafanaFinalScanner:
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔒 Grafana Security Scan Report</h1>
+            <h1> Grafana Security Scan Report</h1>
             <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | Targets: {total_targets}</p>
         </div>
         
@@ -2475,7 +2713,7 @@ class GrafanaFinalScanner:
                 f.write(html_content)
             print(f"{Colors.SUCCESS}[+] HTML report saved: {filename}{Colors.RESET}")
             
-        except Exception as e:
+        except NETWORK_AND_PARSE_ERRORS as e:
             print(f"{Colors.CRITICAL}[-] Error saving HTML report: {str(e)}{Colors.RESET}")
     
     def _save_csv_report(self, results: List[Dict], filename: str):
@@ -2507,7 +2745,7 @@ class GrafanaFinalScanner:
                         ])
             
             print(f"{Colors.SUCCESS}[+] CSV report saved: {filename}{Colors.RESET}")
-        except Exception as e:
+        except NETWORK_AND_PARSE_ERRORS as e:
             print(f"{Colors.CRITICAL}[-] Error saving CSV report: {str(e)}{Colors.RESET}")
 
 
@@ -2515,25 +2753,65 @@ class GrafanaFinalScanner:
 #  WEB SERVER
 # =====================================================================
 
-def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', port: int = 8080):
+def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', port: int = 8080,
+                     dashboard_token: Optional[str] = None):
     """
     Create and configure Flask web server for viewing scan results
     and managing targets/vulnerabilities.
-    
+
+    When ``dashboard_token`` is provided, every route requires a
+    ``Authorization: Bearer <token>`` header (or a ``?token=`` query
+    parameter for browser access). State-changing requests additionally
+    require a matching ``X-CSRF-Token`` header (double-submit cookie)
+    to prevent cross-site request forgery.
+
     Args:
         scanner: Scanner instance with vulnerability database
         host: Host to bind to
         port: Port to listen on
-    
+        dashboard_token: Optional bearer token protecting the dashboard
+
     Returns:
         Configured Flask app
     """
     if not FLASK_AVAILABLE:
         print(f"{Colors.CRITICAL}[!] Flask is not installed. Install with: pip install flask{Colors.RESET}")
         sys.exit(1)
-    
+
+    if dashboard_token is None and host in ('0.0.0.0', ''):
+        print(f"{Colors.CRITICAL}[!] WARNING: web dashboard is UNAUTHENTICATED and bound to "
+              f"all interfaces. Anyone who can reach this port can read and modify scan "
+              f"data. Use --dashboard-token or bind to 127.0.0.1.{Colors.RESET}")
+
+    import hmac
+    import secrets
+
     app = Flask(__name__)
-    
+    app.config['JSON_SORT_KEYS'] = False
+    _csrf_token = secrets.token_hex(32)
+    app.jinja_env.globals.update(api_token=dashboard_token, csrf_token=_csrf_token)
+
+    def _check_auth() -> bool:
+        if dashboard_token is None:
+            return True
+        auth = request.headers.get('Authorization', '')
+        if auth.startswith('Bearer '):
+            return hmac.compare_digest(auth[len('Bearer '):], dashboard_token)
+        token = request.args.get('token') or (request.form.get('token') if request.form else None)
+        return bool(token) and hmac.compare_digest(token, dashboard_token)
+
+    @app.before_request
+    def _enforce_auth():
+        if not _check_auth():
+            return jsonify({'error': 'unauthorized'}), 401
+
+    @app.after_request
+    def _set_csrf_cookie(resp):
+        if dashboard_token is not None:
+            resp.set_cookie('gfs_csrf', _csrf_token, httponly=False,
+                            samesite='Strict', secure=not app.debug)
+        return resp
+
     @app.route('/')
     def dashboard():
         """Main dashboard with statistics and overview"""
@@ -2547,7 +2825,7 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-            <title>🛡️ Grafana Scanner - Dashboard</title>
+            <title> Grafana Scanner - Dashboard</title>
             <style>
                 * {
                     margin: 0;
@@ -2894,57 +3172,57 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
         
         <div class="navbar">
             <h1>
-                <span>🛡️</span> Grafana Scanner
+                <span></span> Grafana Scanner
             </h1>
             <div class="nav-links">
-                <a href="/" class="active">📊 Dashboard</a>
-                <a href="/targets">🎯 Targets</a>
-                <a href="/vulnerabilities">⚠️ Vulns DB</a>
+                <a href="/" class="active"> Dashboard</a>
+                <a href="/targets"> Targets</a>
+                <a href="/vulnerabilities">[WARN] Vulns DB</a>
             </div>
-            <div style="margin-left: auto; font-size: 0.8rem; opacity: 0.7;">👋 hey, security hero</div>
+            <div style="margin-left: auto; font-size: 0.8rem; opacity: 0.7;"> hey, security hero</div>
         </div>
         
         <div class="container">
             {% set open_vulns = stats.get('open_vulnerabilities', 0) %}
             <div class="insight-message">
-                <span>🧠</span>
+                <span></span>
                 {% if open_vulns == 0 %}
-                    ✨ All clear! No open vulnerabilities — you're a legend. Keep scanning!
+                     All clear! No open vulnerabilities — you're a legend. Keep scanning!
                 {% elif open_vulns < 3 %}
-                    🧹 A few issues found – good time to patch them before they grow.
+                     A few issues found – good time to patch them before they grow.
                 {% else %}
-                    🚨 Heads up! {{ open_vulns }} unresolved vulnerabilities need attention.
+                     Heads up! {{ open_vulns }} unresolved vulnerabilities need attention.
                 {% endif %}
             </div>
         
             <div class="stats-grid">
                 <div class="stat-card">
-                    <h3>📡 TRACKED TARGETS</h3>
+                    <h3> TRACKED TARGETS</h3>
                     <div class="value card-info">{{ stats.get('total_targets', 0) }}</div>
-                    <div style="font-size: 12px; margin-top: 8px;">🌐 monitored assets</div>
+                    <div style="font-size: 12px; margin-top: 8px;"> monitored assets</div>
                 </div>
                 <div class="stat-card">
-                    <h3>⚠️ OPEN VULNS</h3>
+                    <h3>[WARN] OPEN VULNS</h3>
                     <div class="value card-danger">{{ stats.get('open_vulnerabilities', 0) }}</div>
-                    <div style="font-size: 12px;">🔓 need fixing asap</div>
+                    <div style="font-size: 12px;"> need fixing asap</div>
                 </div>
                 <div class="stat-card">
-                    <h3>🔄 SCANS PERFORMED</h3>
+                    <h3> SCANS PERFORMED</h3>
                     <div class="value card-safe">{{ stats.get('total_scans', 0) }}</div>
-                    <div style="font-size: 12px;">🛠️ total health checks</div>
+                    <div style="font-size: 12px;"> total health checks</div>
                 </div>
                 <div class="stat-card">
-                    <h3>🎯 TARGETS AT RISK</h3>
+                    <h3> TARGETS AT RISK</h3>
                     <div class="value card-warning">{{ stats.get('targets_at_risk', 0) }}</div>
-                    <div style="font-size: 12px;">🔥 high risk exposure</div>
+                    <div style="font-size: 12px;"> high risk exposure</div>
                 </div>
             </div>
         
             <div class="section-title">
-                <span>🚨💀</span> Critical vulnerabilities
+                <span></span> Critical vulnerabilities
                 <span style="font-size: 0.8rem; background: #2a1c2e; padding: 2px 12px; border-radius: 30px;">{{ stats.get('by_severity', {}).get('CRITICAL', 0) }} active</span>
             </div>
-            <div class="subhead">🔔 These can lead to full compromise — patch immediately!</div>
+            <div class="subhead"> These can lead to full compromise — patch immediately!</div>
             
             {% set critical_list = [] %}
             {% for v in vulns if v.get('severity') == 'CRITICAL' %}
@@ -2955,18 +3233,18 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
             <div class="table-wrapper">
                 <table>
                     <thead>
-                        <tr><th>🎯 Target</th><th>🔖 CVE ID</th><th>💥 Severity</th><th>📝 Issue snippet</th><th>🔧 Actions</th></tr>
+                        <tr><th> Target</th><th> CVE ID</th><th> Severity</th><th> Issue snippet</th><th> Actions</th></tr>
                     </thead>
                     <tbody>
                         {% for v in vulns if v.get('severity') == 'CRITICAL' %}
                         <tr>
-                            <td><a href="/targets?url={{ v.get('target_url', '') | urlencode }}">🌐 {{ v.get('target_url', '')[:45] }}{% if v.get('target_url', '')|length > 45 %}..{% endif %}</a></td>
+                            <td><a href="/targets?url={{ v.get('target_url', '') | urlencode }}"> {{ v.get('target_url', '')[:45] }}{% if v.get('target_url', '')|length > 45 %}..{% endif %}</a></td>
                             <td><code>{{ v.get('cve_id', 'N/A') }}</code></td>
-                            <td><span class="badge severity-critical">🔥 CRITICAL</span></td>
+                            <td><span class="badge severity-critical"> CRITICAL</span></td>
                             <td style="max-width: 280px;">{{ v.get('message', '')[:65] }}{% if v.get('message', '')|length > 65 %}…{% endif %}</td>
                             <td class="actions">
-                                <button class="btn btn-fix" onclick="updateStatus('{{ v.get('id', '') }}', 'fixed')">✅ Mark Fixed</button>
-                                <button class="btn btn-fp" onclick="updateStatus('{{ v.get('id', '') }}', 'false_positive')">❌ False Positive</button>
+                                <button class="btn btn-fix" onclick="updateStatus('{{ v.get('id', '') }}', 'fixed')"> Mark Fixed</button>
+                                <button class="btn btn-fp" onclick="updateStatus('{{ v.get('id', '') }}', 'false_positive')"> False Positive</button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -2975,16 +3253,16 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
             </div>
             {% else %}
             <div class="empty-state">
-                <h3>🎉🌈 No critical vulnerabilities!</h3>
+                <h3> No critical vulnerabilities!</h3>
                 <p>Your most dangerous paths are secure — but keep an eye on high/medium issues.</p>
             </div>
             {% endif %}
         
             <div class="section-title">
-                <span>📊🧩</span> Vulnerability breakdown
+                <span></span> Vulnerability breakdown
                 <span style="font-size: 0.75rem;">severity × count</span>
             </div>
-            {% set severities = {'CRITICAL': '🔴 Critical', 'HIGH': '🟠 High', 'MEDIUM': '🟡 Medium', 'LOW': '🔵 Low'} %}
+            {% set severities = {'CRITICAL': '[CRIT] Critical', 'HIGH': '[HIGH] High', 'MEDIUM': '[MED] Medium', 'LOW': '[LOW] Low'} %}
             {% set severity_colors = {'CRITICAL': '#e34d5e', 'HIGH': '#f39c12', 'MEDIUM': '#f4d03f', 'LOW': '#5dade2'} %}
             {% set total_vulns = stats.get('by_severity', {}).get('CRITICAL', 0) + stats.get('by_severity', {}).get('HIGH', 0) + stats.get('by_severity', {}).get('MEDIUM', 0) + stats.get('by_severity', {}).get('LOW', 0) %}
             
@@ -3002,26 +3280,26 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
                     </div>
                 </div>
                 {% endfor %}
-                <div style="margin-top: 12px; font-size: 0.7rem; text-align: center; color: #acaee6;">📌 total findings: {{ total_vulns }}</div>
+                <div style="margin-top: 12px; font-size: 0.7rem; text-align: center; color: #acaee6;"> total findings: {{ total_vulns }}</div>
             </div>
         
             <div class="section-title">
-                <span>🎯📡</span> Recent targets & risk profile
-                <span style="font-size:0.7rem;">🔍 last monitored assets</span>
+                <span></span> Recent targets & risk profile
+                <span style="font-size:0.7rem;"> last monitored assets</span>
             </div>
             {% if targets %}
             <div class="table-wrapper">
                 <table>
                     <thead>
-                        <tr><th>🌍 Target URL</th><th>📦 Grafana ver</th><th>🔁 Scans</th><th>⚠️ Open Vulns</th><th>📈 Risk score</th></tr>
+                        <tr><th> Target URL</th><th> Grafana ver</th><th> Scans</th><th>[WARN] Open Vulns</th><th> Risk score</th></tr>
                     </thead>
                     <tbody>
                         {% for t in targets[:10] %}
                         <tr>
-                            <td><a href="/targets?url={{ t.get('url', '') | urlencode }}">🗺️ {{ t.get('url', '')[:55] }}{% if t.get('url', '')|length > 55 %}..{% endif %}</a></td>
-                            <td>{% if t.get('version') %}📌 v{{ t.get('version') }}{% else %}❓ unknown{% endif %}</td>
-                            <td>{{ t.get('scan_count', 0) }} 🧪</td>
-                            <td class="{% if t.get('total_vulnerabilities',0) > 0 %}status-open{% endif %}">{{ t.get('total_vulnerabilities', 0) }} {% if t.get('total_vulnerabilities',0) > 0 %}🔥{% else %}✅{% endif %}</td>
+                            <td><a href="/targets?url={{ t.get('url', '') | urlencode }}"> {{ t.get('url', '')[:55] }}{% if t.get('url', '')|length > 55 %}..{% endif %}</a></td>
+                            <td>{% if t.get('version') %} v{{ t.get('version') }}{% else %} unknown{% endif %}</td>
+                            <td>{{ t.get('scan_count', 0) }} </td>
+                            <td class="{% if t.get('total_vulnerabilities',0) > 0 %}status-open{% endif %}">{{ t.get('total_vulnerabilities', 0) }} {% if t.get('total_vulnerabilities',0) > 0 %}{% else %}{% endif %}</td>
                             <td>
                                 <div class="risk-meta">
                                     <span style="min-width: 45px; font-weight:600;">{{ t.get('risk_score', 0) }}</span>
@@ -3030,10 +3308,10 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
                                         <div class="risk-fill {% if score >= 50 %}risk-high{% elif score >= 20 %}risk-medium{% else %}risk-low{% endif %}" style="width: {{ score }}%;"></div>
                                     </div>
                                     <span style="font-size:0.7rem;">
-                                        {% if score >= 70 %}⚠️ critical risk
-                                        {% elif score >= 40 %}🧨 notable risk
-                                        {% elif score >= 15 %}⚡ moderate
-                                        {% else %}🍃 low risk
+                                        {% if score >= 70 %}[WARN] critical risk
+                                        {% elif score >= 40 %} notable risk
+                                        {% elif score >= 15 %}[WARN] moderate
+                                        {% else %} low risk
                                         {% endif %}
                                     </span>
                                 </div>
@@ -3045,33 +3323,40 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
             </div>
             {% else %}
             <div class="empty-state">
-                <h3>📭 No targets in radar yet</h3>
-                <p>Run a scan with <code>--db vulndb.json</code> and start monitoring your Grafana instances ✨</p>
+                <h3> No targets in radar yet</h3>
+                <p>Run a scan with <code>--db vulndb.json</code> and start monitoring your Grafana instances </p>
             </div>
             {% endif %}
         
             <div class="insight-message" style="background: #16172a; border-left-color: #5e8aff;">
-                <span>🤝💬</span>
-                <div><strong>Pro tip:</strong> fixing critical flaws? Use the ✅ “Mark Fixed” button to clean your dashboard. Triage false positives with ❌ FP – keep your data actionable. Stay sharp!</div>
+                <span></span>
+                <div><strong>Pro tip:</strong> fixing critical flaws? Use the  “Mark Fixed” button to clean your dashboard. Triage false positives with  FP – keep your data actionable. Stay sharp!</div>
             </div>
         
             <div class="timestamp">
-                🕒 Last sync: {{ now }} &nbsp;|&nbsp; 🧙‍♀️ security snapshot
+                 Last sync: {{ now }} &nbsp;|&nbsp;  security snapshot
             </div>
             <div class="footnote">
-                💙 made for defenders — every patch makes the ecosystem safer
+                 made for defenders — every patch makes the ecosystem safer
             </div>
         </div>
         
         <script>
+            window.API_TOKEN = "{{ api_token if api_token else '' }}";
+            window.CSRF_TOKEN = "{{ csrf_token }}";
             function updateStatus(vulnId, status) {
                 if (!vulnId) {
                     console.warn("no vuln id provided");
                     return;
                 }
+                var headers = { 'Content-Type': 'application/json' };
+                if (window.API_TOKEN) {
+                    headers['Authorization'] = 'Bearer ' + window.API_TOKEN;
+                    headers['X-CSRF-Token'] = window.CSRF_TOKEN;
+                }
                 fetch('/api/vulnerabilities/' + vulnId + '/status', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headers,
                     body: JSON.stringify({ status: status })
                 })
                 .then(response => response.json())
@@ -3103,7 +3388,7 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-            <title>🎯 Grafana Scanner - Managed Targets</title>
+            <title> Grafana Scanner - Managed Targets</title>
             <style>
                 * { margin: 0; padding: 0; box-sizing: border-box; }
                 body { background: radial-gradient(circle at 10% 20%, #0c0c18, #070710); font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, 'SF Pro Text', 'Roboto', sans-serif; color: #eef2ff; line-height: 1.5; padding-bottom: 2rem; }
@@ -3146,41 +3431,41 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
         </head>
         <body>
             <div class="navbar">
-                <h1><span>🛡️</span> Grafana Scanner </h1>
-                <a href="/">📊 Dashboard</a>
-                <a href="/targets" class="active">🎯 Targets</a>
-                <a href="/vulnerabilities">⚠️ Vulns DB</a>
-                <div style="margin-left: auto; font-size: 0.8rem; opacity: 0.7;">👋 hey, security hero</div>
+                <h1><span></span> Grafana Scanner </h1>
+                <a href="/"> Dashboard</a>
+                <a href="/targets" class="active"> Targets</a>
+                <a href="/vulnerabilities">[WARN] Vulns DB</a>
+                <div style="margin-left: auto; font-size: 0.8rem; opacity: 0.7;"> hey, security hero</div>
             </div>
             <div class="container">
                 <div class="insight-message">
-                    <span>🗂️</span>
+                    <span></span>
                     <span>Here are all your monitored Grafana instances. Click on any URL to inspect details.</span>
                 </div>
                 <div class="section-title">
-                    <span>🎯📋</span> Tracked targets
+                    <span></span> Tracked targets
                     <span style="font-size: 0.8rem; background: #2a1c2e; padding: 2px 12px; border-radius: 30px;">{{ targets|length }} total</span>
                 </div>
-                <div class="subhead">🔍 last seen, vulnerabilities & risk score per asset</div>
+                <div class="subhead"> last seen, vulnerabilities & risk score per asset</div>
                 {% if targets %}
                 <div class="table-wrapper">
                     <table>
                         <thead>
-                            <tr><th>🌍 Target URL</th><th>📦 Version</th><th>📅 First seen</th><th>🕒 Last scan</th><th>🔄 Scans</th><th>⚠️ Open Vulns</th><th>📈 Risk score</th></tr>
+                            <tr><th> Target URL</th><th> Version</th><th> First seen</th><th> Last scan</th><th> Scans</th><th>[WARN] Open Vulns</th><th> Risk score</th></tr>
                         </thead>
                         <tbody>
                         {% for t in targets %}
                         <tr>
-                            <td><a href="{{ t.get('url', '') }}" target="_blank">🗺️ {{ t.get('url', '')[:55] }}{% if t.get('url', '')|length > 55 %}..{% endif %}</a></td>
-                            <td>{% if t.get('version') %}📌 v{{ t.get('version') }}{% else %}❓ unknown{% endif %}</td>
+                            <td><a href="{{ t.get('url', '') }}" target="_blank"> {{ t.get('url', '')[:55] }}{% if t.get('url', '')|length > 55 %}..{% endif %}</a></td>
+                            <td>{% if t.get('version') %} v{{ t.get('version') }}{% else %} unknown{% endif %}</td>
                             <td><small>{{ t.get('first_seen', '')[:10] }}</small></td>
                             <td><small>{{ t.get('last_scanned', '')[:10] }}</small></td>
-                            <td>{{ t.get('scan_count', 0) }} 🧪</td>
+                            <td>{{ t.get('scan_count', 0) }} </td>
                             <td>
                                 {% set tv = t.get('total_vulnerabilities', 0) %}
-                                <span {% if tv > 0 %}style="color:#ff7676;font-weight:bold"{% endif %}>{{ tv }} {% if tv > 0 %}🔥{% else %}✅{% endif %}</span>
-                                {% if t.get('critical_count', 0) > 0 %}<span class="badge badge-critical">💀 C:{{ t.get('critical_count') }}</span>{% endif %}
-                                {% if t.get('high_count', 0) > 0 %}<span class="badge badge-high">⚠️ H:{{ t.get('high_count') }}</span>{% endif %}
+                                <span {% if tv > 0 %}style="color:#ff7676;font-weight:bold"{% endif %}>{{ tv }} {% if tv > 0 %}{% else %}{% endif %}</span>
+                                {% if t.get('critical_count', 0) > 0 %}<span class="badge badge-critical"> C:{{ t.get('critical_count') }}</span>{% endif %}
+                                {% if t.get('high_count', 0) > 0 %}<span class="badge badge-high">[WARN] H:{{ t.get('high_count') }}</span>{% endif %}
                             </td>
                             <td>
                                 <div class="risk-meta">
@@ -3190,10 +3475,10 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
                                         <div class="risk-fill {% if score >= 50 %}risk-high{% elif score >= 20 %}risk-medium{% else %}risk-low{% endif %}" style="width: {{ score }}%;"></div>
                                     </div>
                                     <span style="font-size:0.7rem;">
-                                        {% if score >= 70 %}⚠️ critical risk
-                                        {% elif score >= 40 %}🧨 notable risk
-                                        {% elif score >= 15 %}⚡ moderate
-                                        {% else %}🍃 low risk
+                                        {% if score >= 70 %}[WARN] critical risk
+                                        {% elif score >= 40 %} notable risk
+                                        {% elif score >= 15 %}[WARN] moderate
+                                        {% else %} low risk
                                         {% endif %}
                                     </span>
                                 </div>
@@ -3205,12 +3490,12 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
                 </div>
                 {% else %}
                 <div class="empty-state">
-                    <h3>📭 No targets in radar yet</h3>
-                    <p>Run a scan with <code>--db vulndb.json</code> and start monitoring your Grafana instances ✨</p>
+                    <h3> No targets in radar yet</h3>
+                    <p>Run a scan with <code>--db vulndb.json</code> and start monitoring your Grafana instances </p>
                 </div>
                 {% endif %}
                 <div class="insight-message" style="background: #16172a; border-left-color: #5e8aff; margin-top: 1rem;">
-                    <span>💡🧠</span>
+                    <span></span>
                     <div><strong>Pro tip:</strong> Targets with “Critical” or “High” badges need immediate attention. Use the Dashboard to fix vulnerabilities or mark false positives.</div>
                 </div>
             </div>
@@ -3228,7 +3513,7 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-            <title>⚠️ Grafana Scanner - Vulnerability </title>
+            <title>[WARN] Grafana Scanner - Vulnerability </title>
             <style>
                 * { margin: 0; padding: 0; box-sizing: border-box; }
                 body { background: radial-gradient(circle at 10% 20%, #0c0c18, #070710); font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, 'SF Pro Text', 'Roboto', sans-serif; color: #eef2ff; line-height: 1.5; padding-bottom: 2rem; }
@@ -3283,57 +3568,57 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
         </head>
         <body>
             <div class="navbar">
-                <h1><span>🛡️</span> Grafana Scanner </h1>
-                <a href="/">📊 Dashboard</a>
-                <a href="/targets">🎯 Targets</a>
-                <a href="/vulnerabilities" class="active">⚠️ Vulns DB</a>
-                <div style="margin-left: auto; font-size: 0.8rem; opacity: 0.7;">👋 hey, security hero</div>
+                <h1><span></span> Grafana Scanner </h1>
+                <a href="/"> Dashboard</a>
+                <a href="/targets"> Targets</a>
+                <a href="/vulnerabilities" class="active">[WARN] Vulns DB</a>
+                <div style="margin-left: auto; font-size: 0.8rem; opacity: 0.7;"> hey, security hero</div>
             </div>
             <div class="container">
                 <div class="insight-message">
-                    <span>🗄️</span>
+                    <span></span>
                     <span>Full list of discovered vulnerabilities. Filter by severity or status, then take action.</span>
                 </div>
                 <div class="section-title">
-                    <span>📋⚠️</span> Vulnerability registry
+                    <span>[WARN]</span> Vulnerability registry
                     <span style="font-size: 0.8rem; background: #2a1c2e; padding: 2px 12px; border-radius: 30px;">{{ vulns|length }} total</span>
                 </div>
-                <div class="subhead">🔍 track, triage, and manage every finding</div>
+                <div class="subhead"> track, triage, and manage every finding</div>
                 <div class="filters">
                     <select id="severityFilter" onchange="filterTable()">
-                        <option value="all">🔽 All severities</option>
-                        <option value="CRITICAL">🔥 Critical</option>
-                        <option value="HIGH">🟠 High</option>
-                        <option value="MEDIUM">🟡 Medium</option>
-                        <option value="LOW">🔵 Low</option>
+                        <option value="all"> All severities</option>
+                        <option value="CRITICAL"> Critical</option>
+                        <option value="HIGH">[HIGH] High</option>
+                        <option value="MEDIUM">[MED] Medium</option>
+                        <option value="LOW">[LOW] Low</option>
                     </select>
                     <select id="statusFilter" onchange="filterTable()">
-                        <option value="all">📌 All statuses</option>
-                        <option value="open">⚠️ Open</option>
-                        <option value="fixed">✅ Fixed</option>
-                        <option value="false_positive">❌ False Positive</option>
-                        <option value="accepted">📝 Accepted risk</option>
+                        <option value="all"> All statuses</option>
+                        <option value="open">[WARN] Open</option>
+                        <option value="fixed"> Fixed</option>
+                        <option value="false_positive"> False Positive</option>
+                        <option value="accepted"> Accepted risk</option>
                     </select>
-                    <input type="text" id="searchInput" placeholder="🔎 Search by CVE or target..." onkeyup="filterTable()">
+                    <input type="text" id="searchInput" placeholder=" Search by CVE or target..." onkeyup="filterTable()">
                 </div>
                 {% if vulns %}
                 <div class="table-wrapper">
                     <table id="vulnTable">
                         <thead>
-                            <tr><th>🎯 Target</th><th>🔖 CVE ID</th><th>💥 Severity</th><th>📌 Status</th><th>📅 Discovered</th><th>🛠️ Actions</th></tr>
+                            <tr><th> Target</th><th> CVE ID</th><th> Severity</th><th> Status</th><th> Discovered</th><th> Actions</th></tr>
                         </thead>
                         <tbody>
                         {% for v in vulns %}
                         <tr class="vuln-row" data-severity="{{ v.get('severity', 'LOW') }}" data-status="{{ v.get('status', 'open') }}" data-cve="{{ v.get('cve_id', '') }}" data-target="{{ v.get('target_url', '') }}">
-                            <td><a href="{{ v.get('target_url', '') }}" target="_blank">🌐 {{ v.get('target_url', '')[:50] }}{% if v.get('target_url', '')|length > 50 %}..{% endif %}</a></td>
+                            <td><a href="{{ v.get('target_url', '') }}" target="_blank"> {{ v.get('target_url', '')[:50] }}{% if v.get('target_url', '')|length > 50 %}..{% endif %}</a></td>
                             <td><code>{{ v.get('cve_id', 'N/A') }}</code></td>
-                            <td><span class="badge severity-{{ v.get('severity', 'low').lower() }}">{% if v.get('severity') == 'CRITICAL' %}🔥{% elif v.get('severity') == 'HIGH' %}⚠️{% elif v.get('severity') == 'MEDIUM' %}🟡{% else %}🔵{% endif %} {{ v.get('severity', 'LOW') }}</span></td>
+                            <td><span class="badge severity-{{ v.get('severity', 'low').lower() }}">{% if v.get('severity') == 'CRITICAL' %}{% elif v.get('severity') == 'HIGH' %}[WARN]{% elif v.get('severity') == 'MEDIUM' %}[MED]{% else %}[LOW]{% endif %} {{ v.get('severity', 'LOW') }}</span></td>
                             <td>
                                 <span class="status-{{ v.get('status', 'open') }}">
-                                    {% if v.get('status') == 'open' %}⚠️ Open
-                                    {% elif v.get('status') == 'fixed' %}✅ Fixed
-                                    {% elif v.get('status') == 'false_positive' %}❌ False Positive
-                                    {% elif v.get('status') == 'accepted' %}📝 Accepted
+                                    {% if v.get('status') == 'open' %}[WARN] Open
+                                    {% elif v.get('status') == 'fixed' %} Fixed
+                                    {% elif v.get('status') == 'false_positive' %} False Positive
+                                    {% elif v.get('status') == 'accepted' %} Accepted
                                     {% else %}{{ v.get('status') }}{% endif %}
                                 </span>
                             </td>
@@ -3341,11 +3626,11 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
                             <td>
                                 <div class="actions">
                                     {% if v.get('status') == 'open' %}
-                                    <button class="btn btn-fix" onclick="updateStatus('{{ v.get('id', '') }}', 'fixed')">✅ Mark Fixed</button>
-                                    <button class="btn btn-fp" onclick="updateStatus('{{ v.get('id', '') }}', 'false_positive')">❌ False Positive</button>
-                                    <button class="btn btn-accept" onclick="updateStatus('{{ v.get('id', '') }}', 'accepted')">📝 Accept Risk</button>
+                                    <button class="btn btn-fix" onclick="updateStatus('{{ v.get('id', '') }}', 'fixed')"> Mark Fixed</button>
+                                    <button class="btn btn-fp" onclick="updateStatus('{{ v.get('id', '') }}', 'false_positive')"> False Positive</button>
+                                    <button class="btn btn-accept" onclick="updateStatus('{{ v.get('id', '') }}', 'accepted')"> Accept Risk</button>
                                     {% else %}
-                                    <button class="btn btn-reopen" onclick="updateStatus('{{ v.get('id', '') }}', 'open')">🔄 Reopen</button>
+                                    <button class="btn btn-reopen" onclick="updateStatus('{{ v.get('id', '') }}', 'open')"> Reopen</button>
                                     {% endif %}
                                 </div>
                             </td>
@@ -3356,21 +3641,28 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
                 </div>
                 {% else %}
                 <div class="empty-state">
-                    <h3>✅ No vulnerabilities recorded</h3>
+                    <h3> No vulnerabilities recorded</h3>
                     <p>Run a scan to populate the vulnerability database.</p>
                 </div>
                 {% endif %}
                 <div class="insight-message" style="background: #16172a; border-left-color: #5e8aff; margin-top: 1rem;">
-                    <span>🧠💡</span>
+                    <span></span>
                     <div><strong>Pro tip:</strong> Use filters to focus on critical or open issues. Mark fixed vulnerabilities to clean up your backlog, or accept risk when mitigation isn't planned.</div>
                 </div>
             </div>
             <script>
+                window.API_TOKEN = "{{ api_token if api_token else '' }}";
+                window.CSRF_TOKEN = "{{ csrf_token }}";
                 function updateStatus(vulnId, status) {
                     if (!vulnId) return;
+                    var headers = { 'Content-Type': 'application/json' };
+                    if (window.API_TOKEN) {
+                        headers['Authorization'] = 'Bearer ' + window.API_TOKEN;
+                        headers['X-CSRF-Token'] = window.CSRF_TOKEN;
+                    }
                     fetch('/api/vulnerabilities/' + vulnId + '/status', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: headers,
                         body: JSON.stringify({ status: status })
                     })
                     .then(r => r.json())
@@ -3402,7 +3694,13 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
     @app.route('/api/vulnerabilities/<vuln_id>/status', methods=['POST'])
     def update_vuln_status(vuln_id):
         """API endpoint to update vulnerability status"""
-        data = request.get_json()
+        if dashboard_token is not None:
+            cookie_csrf = request.cookies.get('gfs_csrf')
+            header_csrf = request.headers.get('X-CSRF-Token')
+            if not (cookie_csrf and header_csrf and
+                    hmac.compare_digest(cookie_csrf, header_csrf)):
+                return jsonify({'success': False, 'error': 'csrf validation failed'}), 403
+        data = request.get_json(silent=True)
         if not data or 'status' not in data:
             return jsonify({'success': False, 'error': 'Missing status'}), 400
         
@@ -3437,23 +3735,11 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
 # =====================================================================
 
 def print_banner():
-    """Display professional tool banner"""
-    banner = f"""
-{Colors.CRITICAL}    ╔═══════════════════════════════════════════════════════════════╗
-    ║{Colors.RESET}   {Colors.BOLD}{Colors.SUCCESS}███████{Colors.RESET}{Colors.CRITICAL}╗{Colors.RESET}{Colors.BOLD}{Colors.SUCCESS}██████{Colors.RESET}{Colors.CRITICAL}╗{Colors.RESET}{Colors.BOLD}{Colors.SUCCESS}████████{Colors.RESET}{Colors.CRITICAL}╗{Colors.RESET}{Colors.BOLD}{Colors.SUCCESS}███████{Colors.RESET}{Colors.CRITICAL}╗{Colors.RESET}{Colors.BOLD}{Colors.SUCCESS}██{Colors.RESET}{Colors.CRITICAL}╗{Colors.RESET}{Colors.BOLD}{Colors.SUCCESS}██{Colors.RESET}{Colors.CRITICAL}╗{Colors.RESET}{Colors.BOLD}{Colors.SUCCESS}██{Colors.RESET}{Colors.CRITICAL}╗     {Colors.RESET}{Colors.BOLD}{Colors.INFO}╔══╗{Colors.RESET}{Colors.CRITICAL}║
-    ║{Colors.RESET}   {Colors.BOLD}{Colors.SUCCESS}██╔════╝██╔══████╔════╝██╔════╝██║██╔██╗██║     {Colors.RESET}{Colors.BOLD}{Colors.INFO}║  ║{Colors.RESET}{Colors.CRITICAL}║
-    ║{Colors.RESET}   {Colors.BOLD}{Colors.SUCCESS}█████╗  ██████╔███████╗█████╗  ██║████╗ ██║     {Colors.RESET}{Colors.BOLD}{Colors.CYAN}╠╝  ╚╣{Colors.RESET}{Colors.CRITICAL}║
-    ║{Colors.RESET}   {Colors.BOLD}{Colors.SUCCESS}██╔══╝  ██╔══██╔══██║██╔══╝  ██║██║╚██╗██║     {Colors.RESET}{Colors.BOLD}{Colors.CYAN}║   ╔╝{Colors.RESET}{Colors.CRITICAL}║
-    ║{Colors.RESET}   {Colors.BOLD}{Colors.SUCCESS}██║     ██║  ███████║███████╗██║██║ ╚████║     {Colors.RESET}{Colors.BOLD}{Colors.INFO}║   ╚╗{Colors.RESET}{Colors.CRITICAL}║
-    ║{Colors.RESET}   {Colors.BOLD}{Colors.SUCCESS}╚═╝     ╚═╝  ╚══════╝╚══════╝╚═╝╚═╝  ╚═══╝     {Colors.RESET}{Colors.BOLD}{Colors.INFO}╩═══╝{Colors.RESET}{Colors.CRITICAL}║
-    ║{Colors.RESET}                                                              {Colors.CRITICAL}║
-    ║{Colors.RESET}   {Colors.BOLD}{Colors.PURPLE}▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓{Colors.RESET}{Colors.CRITICAL}║
-    ║{Colors.RESET}   {Colors.BOLD}{Colors.CYAN}GRAFANA FINAL SCANNER{Colors.RESET}    {Colors.DIM}Professional Security Audit Suite{Colors.RESET}     {Colors.CRITICAL}║
-    ║{Colors.RESET}   {Colors.DIM}v3.0.0 | 15 CVE Checks | Multi-Format Reports | Web Dashboard{Colors.RESET} {Colors.CRITICAL}║
-    ║{Colors.RESET}   {Colors.DIM}Developed by: Ziad{Colors.RESET}                                         {Colors.CRITICAL}║
-    ╚═══════════════════════════════════════════════════════════════╝{Colors.RESET}
-"""
-    print(banner)
+    """Print a plain-text tool header (no decorative ASCII art)."""
+    print(f"{Colors.BOLD}{Colors.CYAN}Grafana Final Scanner{Colors.RESET} {Colors.DIM}v3.1.0{Colors.RESET}")
+    print(f"{Colors.DIM}Grafana vulnerability scanner - 15 CVE checks, multi-format reports, "
+          f"web dashboard{Colors.RESET}")
+    print()
 
 
 # =====================================================================
@@ -3535,6 +3821,8 @@ def main():
                        help='Start web dashboard on specified port (default: 8080)')
     parser.add_argument('--no-banner', action='store_true', help='Suppress banner display')
     parser.add_argument('--host', default='127.0.0.1', help='Host to bind web server to (default: 127.0.0.1)')
+    parser.add_argument('--dashboard-token', help='Bearer token required to access the web dashboard '
+                                                  '(highly recommended when --host 0.0.0.0 is used)')
     
     args = parser.parse_args()
     
@@ -3572,7 +3860,8 @@ def main():
         print(f"\n{Colors.INFO}[*] Starting web dashboard on {Colors.BOLD}http://{args.host}:{args.serve}{Colors.RESET}")
         print(f"{Colors.DIM}[*] Press Ctrl+C to stop the server{Colors.RESET}\n")
         
-        app = create_web_server(scanner, host=args.host, port=args.serve)
+        app = create_web_server(scanner, host=args.host, port=args.serve,
+                                dashboard_token=args.dashboard_token)
         
         # Clean shutdown
         def shutdown():
@@ -3607,7 +3896,7 @@ def main():
     except KeyboardInterrupt:
         print(f"\n\n{Colors.WARN}[!] Scan interrupted by user{Colors.RESET}")
         sys.exit(0)
-    except Exception as e:
+    except NETWORK_AND_PARSE_ERRORS as e:
         print(f"\n{Colors.CRITICAL}[!] Fatal error: {str(e)}{Colors.RESET}")
         if args.verbose:
             import traceback

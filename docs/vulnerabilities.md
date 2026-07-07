@@ -8,10 +8,10 @@ The Grafana Final Scanner detects 15+ CVEs across Grafana versions from 2018 to 
 
 | Severity | Score Range | Color | Description |
 |----------|-------------|-------|-------------|
-| **CRITICAL** | 9.0-10.0 | 🔴 Red | Remote code execution, authentication bypass |
-| **HIGH** | 7.0-8.9 | 🟠 Orange | Data access, server-side attacks |
-| **MEDIUM** | 4.0-6.9 | 🟡 Yellow | Information disclosure, enumeration |
-| **LOW** | 0.1-3.9 | 🔵 Blue | Configuration weaknesses, missing headers |
+| **CRITICAL** | 9.0-10.0 | [CRIT] Red | Remote code execution, authentication bypass |
+| **HIGH** | 7.0-8.9 | [HIGH] Orange | Data access, server-side attacks |
+| **MEDIUM** | 4.0-6.9 | [MED] Yellow | Information disclosure, enumeration |
+| **LOW** | 0.1-3.9 | [LOW] Blue | Configuration weaknesses, missing headers |
 
 ## Critical Vulnerabilities
 
