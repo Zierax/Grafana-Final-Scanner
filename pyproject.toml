@@ -11,7 +11,7 @@ license = {text = "MIT"}
 requires-python = ">=3.9"
 keywords = ["security", "grafana", "scanner", "vulnerability", "cve", "audit"]
 authors = [
-    {name = "Ziad", email = "ziad@example.com"}
+    {name = "Ziad", email = "zs.01117875692@gmail.com"}
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
