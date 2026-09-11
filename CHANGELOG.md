@@ -2,6 +2,17 @@
 
 All notable changes to the Grafana Final Scanner project will be documented in this file.
 
+## [3.1.1] - 2026-09-11
+
+### Fixed
+- **Test suite hardening:** Fixed 6 brittle tests — `test_load_io_error_resets` now mocks `open` instead of relying on `chmod 000` (fails under root), `test_generic_exception_returns_none` now correctly expects `RuntimeError` to propagate through `_safe_request`, `test_check_security_headers_request_exception` uses `RequestException` to match narrow exception handling, CVE check exception tests (`_run_single_cve_check`, `_run_cve_checks_parallel`) now catch broad `Exception` so one failing check cannot crash the whole scan, and banner test updated for new `Security Audit Suite` wording.
+- **Scanner robustness:** `_host_of` corrected from `@staticmethod` to instance method (was referencing `self.verbose` without `self`). `check_security_headers` and `check_cors_misconfiguration` now catch `Exception` so unexpected errors return safe empty results instead of crashing. CVE orchestration (`_run_single_cve_check`, `_run_cve_checks_parallel`) now catches `Exception` broadly for resilience while `_safe_request` keeps narrow `RequestException`-only handling to surface programming errors.
+- **Banner:** Updated to `Security Audit Suite - 15 CVE checks...` with version `3.1.1` and retained backward-compatible `Grafana vulnerability scanner` line.
+- **WSL/CI infra:** Fixed ownership of working tree (`chown -R zierax`) so `pytest` cache and `ruff` cache can write on `drvfs` mounts; verified `make test` and `make lint` pass in WSL.
+
+### Changed
+- Bumped package version `3.1.0` → `3.1.1` in `pyproject.toml`, `scanner.py:print_banner`, and test assertions.
+
 ## [3.1.0] - 2026-07-07
 
 This release focuses on security hardening and reliability fixes identified in a
