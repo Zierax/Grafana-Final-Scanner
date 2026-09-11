@@ -1237,13 +1237,9 @@ class TestVulnerabilityDBExtended(unittest.TestCase):
 
     def test_load_io_error_resets(self):
         """IOError during load should reset to empty"""
-        # Make file unreadable
-        os.chmod(self.temp_db.name, 0o000)
-        try:
+        with patch('builtins.open', side_effect=IOError("permission denied")):
             db = VulnerabilityDB(self.temp_db.name)
             self.assertEqual(db._data["targets"], {})
-        finally:
-            os.chmod(self.temp_db.name, 0o644)
 
     def test_save_io_error_silent(self):
         """IOError during save should not crash"""

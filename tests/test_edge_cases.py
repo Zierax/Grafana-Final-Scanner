@@ -584,10 +584,10 @@ class TestSafeRequestEdgeCases(unittest.TestCase):
 
     @patch('requests.Session.request')
     def test_generic_exception_returns_none(self, mock_request):
-        """Any other exception should return None"""
+        """Non-network exceptions should propagate, not be swallowed"""
         mock_request.side_effect = RuntimeError("Something went wrong")
-        result = self.scanner._safe_request('GET', 'https://example.com')
-        self.assertIsNone(result)
+        with self.assertRaises(RuntimeError):
+            self.scanner._safe_request('GET', 'https://example.com')
 
     @patch('requests.Session.request')
     @patch('scanner.time.sleep', return_value=None)
@@ -983,7 +983,7 @@ class TestSecurityConfigEdgeCases(unittest.TestCase):
     @patch('scanner.GrafanaFinalScanner._safe_request')
     def test_check_security_headers_request_exception(self, mock_request):
         """Exception in request should return empty dict"""
-        mock_request.side_effect = Exception("Network error")
+        mock_request.side_effect = requests.exceptions.RequestException("Network error")
         results = self.scanner.check_security_headers('https://example.com')
         self.assertEqual(results, {})
 
