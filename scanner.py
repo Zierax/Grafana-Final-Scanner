@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Grafana Final Scanner v3.1
+Grafana Final Scanner v3.1.1
 ===========================
 Professional-grade security assessment tool for Grafana deployments.
 
@@ -630,13 +630,13 @@ class GrafanaFinalScanner:
         with self._print_lock:
             print(output)
     
-    @staticmethod
-    def _host_of(url: str) -> str:
+    def _host_of(self, url: str) -> str:
         """Extract the network host (netloc) from a URL for rate-limit scoping."""
         try:
             return urlparse(url).netloc or url
         except NETWORK_AND_PARSE_ERRORS as e:
-            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
+            if self.verbose:
+                self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             return url
 
     def _parse_retry_after(self, response) -> int:
@@ -2026,11 +2026,12 @@ class GrafanaFinalScanner:
                     }
             
             return results
-            
-        except NETWORK_AND_PARSE_ERRORS as e:
-            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
+
+        except Exception as e:
+            if self.verbose:
+                self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             return {}
-    
+
     def check_cors_misconfiguration(self, base_url: str) -> Dict:
         """Check for CORS misconfiguration"""
         try:
@@ -2077,11 +2078,12 @@ class GrafanaFinalScanner:
                 result['message'] += ' - with credentials! Potential account takeover risk'
             
             return result
-            
-        except NETWORK_AND_PARSE_ERRORS as e:
-            if self.verbose: self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
+
+        except Exception as e:
+            if self.verbose:
+                self.log(f"swallowed {type(e).__name__}: {e}", "INFO", 3)
             return {}
-    
+
     def check_security_config(self, base_url: str) -> Dict:
         """
         Analyze security configuration and information disclosure
@@ -2439,7 +2441,9 @@ class GrafanaFinalScanner:
             try:
                 vulnerable, message, test_url = check_func(url)
                 return cve_id, severity, description, vulnerable, message, test_url
-            except NETWORK_AND_PARSE_ERRORS as e:
+            except Exception as e:
+                if self.verbose:
+                    self.log(f"{cve_id} swallowed {type(e).__name__}: {e}", "INFO", 2)
                 return cve_id, severity, description, False, f"Error: {str(e)}", url
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_threads) as executor:
@@ -2460,7 +2464,7 @@ class GrafanaFinalScanner:
                 self._report_vulnerability(cve_id, severity, message, test_url, results, description)
             elif self.verbose:
                 self.log(f"{cve_id:18} {message}", "SAFE", 1)
-        except NETWORK_AND_PARSE_ERRORS as e:
+        except Exception as e:
             if self.verbose:
                 self.log(f"{cve_id:18} Error: {str(e)}", "ERROR", 1)
     
@@ -3735,10 +3739,11 @@ def create_web_server(scanner: GrafanaFinalScanner, host: str = '127.0.0.1', por
 
 def print_banner():
     """Print a plain-text tool header (no decorative ASCII art)."""
-    print(f"{Colors.BOLD}{Colors.CYAN}Grafana Final Scanner{Colors.RESET} {Colors.DIM}v3.1.0{Colors.RESET}")
-    print(f"{Colors.DIM}Grafana vulnerability scanner - 15 CVE checks, multi-format reports, "
+    print(f"{Colors.BOLD}{Colors.CYAN}Grafana Final Scanner{Colors.RESET} {Colors.DIM}v3.1.1{Colors.RESET}")
+    print(f"{Colors.DIM}Security Audit Suite - 15 CVE checks, multi-format reports, "
           f"web dashboard{Colors.RESET}")
     print()
+    print(f"{Colors.DIM}Grafana vulnerability scanner{Colors.RESET}")
 
 
 # =====================================================================
